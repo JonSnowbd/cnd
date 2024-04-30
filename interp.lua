@@ -7,6 +7,20 @@ end
 
 local interp = {}
 
+--- Clamps a number between min and max
+---@param val number
+---@param min number
+---@param max number
+---@return number
+interp.clamp = function(val, min, max)
+    if val < min then
+        return min
+    elseif val > max then
+        return max
+    end
+
+    return val
+end
 
 ---snaps a number to the nearest increment of `to`
 ---@param n number current value
@@ -39,6 +53,26 @@ interp.lerp = function(from,to,mix,fn)
         return fn(mix, from, to-from, 1.0)
     end
     return from * (1-mix) + to * mix
+end
+
+
+--- returns true if the value falls on or between `target-delta` and `target+delta `
+---@param value number
+---@param delta number
+---@return boolean
+interp.within = function(value, target, delta)
+    return value >= target-delta and value <= target+delta
+end
+
+---@param v number
+---@return integer
+interp.sign = function(v)
+    if v > 0.0 then
+        return 1
+    elseif v < 0.0 then
+        return -1
+    end
+    return 0
 end
 
 ---@param t number the current time that has passed since the easings beginning.

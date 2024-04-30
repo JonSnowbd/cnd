@@ -1,6 +1,5 @@
 local Object = require "dep.classic"
 local interp = require "dep.interp"
-require "src.util.math"
 
 ---@class Playground.Shader : Object
 ---@field needsTime boolean
@@ -56,7 +55,7 @@ local Camera = Object:extend()
 function Camera:new(screenWidth, screenHeight)
     self.dirty = true
     self.rotation = 0.0
-    self.zoom = {2.0, 2.0}
+    self.zoom = {1.0, 1.0}
     self.position = {0.0, 0.0}
     self.snapped = true
     self.normalizedOffset = {0.5, 0.5}
@@ -178,7 +177,7 @@ function Playground:bindShader(name, data)
         shader.raw:send("time", love.timer.getTime())
     end
     if shader.needsTransitionProgress then
-        local progress = Clamp(1.0-(self.transitionTimes[1]/self.transitionTimes[2]), 0.0, 1.0)
+        local progress = interp.clamp(1.0-(self.transitionTimes[1]/self.transitionTimes[2]), 0.0, 1.0)
         if self.transitionEase ~= nil then
             progress = interp.lerp(0.0, 1.0, progress, self.transitionEase)
         end
@@ -247,6 +246,26 @@ function Playground:enableCamera()
 end
 --- Pops the transform.
 function Playground:disableCamera()
+    love.graphics.pop()
+end
+
+--- Great for drawing complex objects, lets you treat everything
+--- as if it was in 'local' space. 
+---@param x? number
+---@param y? number
+---@param r? number
+---@param sx? number
+---@param sy? number
+---@param ox? number
+---@param oy? number
+function Playground:pushTransform(x,y,r,sx,sy,ox,oy)
+    love.graphics.push()
+    love.graphics.scale(sx or 1.0, sy or 1.0)
+    love.graphics.rotate(r or 0.0)
+    love.graphics.translate((ox or 0.0)*-1.0, (oy or 0.0)*-1.0)
+    love.graphics.translate(x or 0.0, y or 0.0)
+end
+function Playground:popTransform()
     love.graphics.pop()
 end
 

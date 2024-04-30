@@ -1,9 +1,132 @@
 local Object = require "dep.classic"
 local json = require "dep.json"
 
+---@class Resource.ImageSheet : Object
+---@field source love.Image
+---@field quads love.Quad[][]
+local ImageSheet = Object:extend()
+
+function ImageSheet:new(image, tileWidth, tileHeight)
+    self.source = image
+    self.quads = {}
+    for y=1,math.floor(self.source:getHeight()/tileHeight) do
+        self.quads[y] = {}
+        for x=1,math.floor(self.source:getWidth()/tileWidth) do
+            self.quads[y][x] = love.graphics.newQuad(x*tileWidth, y*tileHeight, tileWidth, tileHeight, self.source:getWidth(), self.source:getHeight())
+        end
+    end
+end
+
+---comment
+---@param xSprite integer the x index of the sprite, starting with 1
+---@param ySprite integer the y index of the sprite, starting with 1
+---@param x? number x coordinate translation
+---@param y? number y coordinate translation
+---@param r? number radian rotation
+---@param xs? number x scale
+---@param ys? number y scale
+---@param ox? number origin x in pixels
+---@param oy? number origin y in pixels
+function ImageSheet:draw(xSprite, ySprite, x, y, r, xs, ys, ox, oy)
+    love.graphics.draw(self.source, self.quads[ySprite][xSprite], x or 0.0, y or 0.0, r or 0.0, xs or 1.0, ys or 1.0, ox or 0.0, oy or 0.0)
+end
+
+
+---@class Resource.NinePatch : Object
+---@field source love.Image
+---@field quads love.Quad[]
+---@field srcW number
+---@field srcH number
+---@field left number
+---@field top number
+---@field right number
+---@field bottom number
+local NinePatch = Object:extend()
+
+---comment
+---@param image love.Image
+---@param srcX number
+---@param srcY number
+---@param srcW number
+---@param srcH number
+---@param left integer
+---@param top integer
+---@param right integer
+---@param bottom integer
+function NinePatch:new(image, srcX, srcY, srcW, srcH, left, top, right, bottom)
+    self.source = image
+    self.quads = {}
+    self.left = left
+    self.top = top
+    self.right = right
+    self.bottom = bottom
+    self.srcW = srcW
+    self.srcH = srcH
+
+    local imgW = image:getWidth()
+    local imgH = image:getHeight()
+
+    self.quads[1] = love.graphics.newQuad(srcX, srcY, left, top, imgW, imgH)
+    self.quads[2] = love.graphics.newQuad(srcX+left, srcY, srcW-left-right, top, imgW, imgH)
+    self.quads[3] = love.graphics.newQuad(srcX+srcW-right, srcY, right, top, imgW, imgH)
+
+    self.quads[4] = love.graphics.newQuad(srcX, srcY+top, left, srcH-top-bottom, imgW, imgH)
+    self.quads[5] = love.graphics.newQuad(srcX+left, srcY+top, srcW-left-right, srcH-top-bottom, imgW, imgH)
+    self.quads[6] = love.graphics.newQuad(srcX+srcW-right, srcY+top, right, srcH-top-bottom, imgW, imgH)
+
+    self.quads[7] = love.graphics.newQuad(srcX, srcY+srcH-bottom, left, bottom, imgW, imgH)
+    self.quads[8] = love.graphics.newQuad(srcX+left, srcY+srcH-bottom, srcW-left-right, bottom, imgW, imgH)
+    self.quads[9] = love.graphics.newQuad(srcX+srcW-right, srcY+srcH-bottom, right, bottom, imgW, imgH)
+end
+
+
+---@param x number x coordinate translation
+---@param y number y coordinate translation
+---@param w number width in pixels
+---@param h number height in pixels
+---@param r? number radian rotation
+---@param ox? number origin x in pixels
+---@param oy? number origin y in pixels
+function NinePatch:draw(x, y, w, h, r, ox, oy)
+    love.graphics.push()
+    love.graphics.rotate(r or 0.0)
+    love.graphics.translate((ox or 0.0)*-1.0, (oy or 0.0)*-1.0)
+    love.graphics.translate(x, y)
+    self:rawDraw(x,y,w,h)
+    love.graphics.pop()
+end
+
+
+--- Draws without any transform logic
+---@param x number x coordinate translation
+---@param y number y coordinate translation
+---@param w number width in pixels
+---@param h number height in pixels
+function NinePatch:rawDraw(x, y, w, h)
+    local remainingWidth = w-self.left-self.right
+    local remainingHeight = h-self.top-self.bottom
+
+    local barW = remainingWidth/(self.srcW-self.left-self.right)
+    local barH = remainingHeight/(self.srcH-self.top-self.bottom)
+
+    love.graphics.draw(self.source, self.quads[1], 0.0, 0.0)
+    love.graphics.draw(self.source, self.quads[2], self.left, 0.0, 0.0, barW, 1.0)
+    love.graphics.draw(self.source, self.quads[3], self.left+remainingWidth, 0.0)
+
+    love.graphics.draw(self.source, self.quads[4], 0.0, self.top, 0.0, 1.0, barH)
+    love.graphics.draw(self.source, self.quads[5], self.left, self.top, 0.0, barW, barH)
+    love.graphics.draw(self.source, self.quads[6], self.left+remainingWidth, self.top, 0.0, 1.0, barH)
+
+    love.graphics.draw(self.source, self.quads[7], 0.0, self.top+remainingHeight)
+    love.graphics.draw(self.source, self.quads[8], self.left, self.top+remainingHeight, 0.0, barW, 1.0)
+    love.graphics.draw(self.source, self.quads[9], self.left+remainingWidth, self.top+remainingHeight)
+end
 
 ---@class Resource : Object
 local Resource = Object:extend()
+
+Resource.ImageSheet = ImageSheet
+Resource.NinePatch = NinePatch
 
 function Resource:new(identity)
     love.filesystem.setIdentity(identity)

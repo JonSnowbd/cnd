@@ -9,6 +9,7 @@ Covers abstractions for:
 4) Resource manager that handles persisting/updating/loading conveniently in `dep.resource`
 5) Translation support with $TAG support in `dep.translate` (inserts globals, simply require it without assignment)
 6) Complete handling of efficient low-res virtual viewports in `dep.playground`
+7) A module dedicated entirely to juice
 
 and a focus on:
 
