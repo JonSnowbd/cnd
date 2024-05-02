@@ -1,6 +1,9 @@
 local Object = require("dep.classic")
 local json = require("dep.json")
 
+local Grid = require("dep.jumper.grid")
+local Pathfinder = require("dep.jumper.pathfinder")
+
 local ldtk = {}
 
 ---@class ldtk.FieldInstance : Object
@@ -53,7 +56,7 @@ function Entity:new(object, parent)
     self.parent = parent
     self.iid = object["iid"]
     self.identifier = object["__identifier"]
-    self.gridIndex = object["__grid"]
+    self.gridIndex = {object["__grid"][1]+1, object["__grid"][2]+1}
     self.pivot = object["__pivot"]
     self.size = {object["width"], object["height"]}
     self.position = object["px"]
@@ -104,6 +107,8 @@ end
 
 ---@class ldtk.Layer
 ---@field parent ldtk.Level
+---@field gridWidth integer how many cells in the x axis
+---@field gridHeight integer how many cells in the Y axis
 ---@field identifier string the layer's name assigned in ldtk
 ---@field iid string the layer's unique auto generated id
 ---@field visible boolean
@@ -119,6 +124,8 @@ local Layer = Object:extend()
 
 function Layer:new(object, parent)
     self.parent = parent
+    self.gridWidth = object["__cWid"]
+    self.gridHeight = object["__cHei"]
     self.identifier = object["__identifier"]
     self.layerType = object["__type"]
     self.visible = object["visible"]
@@ -155,14 +162,91 @@ function Layer:new(object, parent)
         local w = object["__cWid"]
         local h = object["__cHei"]
 
-        for y=1,h do
-            self.intgrid[y] = {}
-            for x=1,w do
-                local _1dIndex = (y * w) + x
-                self.intgrid[y][x] = object["intGridCsv"][_1dIndex]
+        local x, y = 1, 1
+        for i=1,#object["intGridCsv"] do
+            local v = object["intGridCsv"][i]
+            if self.intgrid[y] == nil then
+                self.intgrid[y] = {}
+            end
+            self.intgrid[y][x] = v
+            x = x + 1
+            if x > w then
+                x = 1
+                y = y + 1
             end
         end
+        -- for y=1,h do
+        --     self.intgrid[y] = {}
+        --     for x=1,w do
+        --         local _1dIndex = (y-1 * w) + x
+        --         self.intgrid[y][x] = object["intGridCsv"][_1dIndex-1]
+        --     end
+        -- end
     end
+end
+
+---If this is an intgrid, pathfinding and its functions are enabled.
+---@param walkableInteger integer the integer on the map that means it is walkable.
+function Layer:addPathfinding(walkableInteger)
+    if self.layerType ~= "IntGrid" then
+        return
+    end
+    self.pathGrid = Grid:new(self.intgrid)
+    ---@type Pathfinder
+    self.pathFinder = Pathfinder:new(self.pathGrid, "ASTAR", walkableInteger)
+
+end
+
+function Layer:hasPathfinding()
+    return self.pathGrid ~= nil
+end
+
+---comment
+---@param startX integer
+---@param startY integer
+---@param endX integer
+---@param endY integer
+---@return Pathfinder.Path|nil
+function Layer:findPath(startX, startY, endX, endY)
+    return self.pathFinder:getPath(startX, startY, endX, endY)
+end
+
+---@param worldX number
+---@param worldY number
+---@return integer
+---@return integer
+function Layer:toIndex(worldX, worldY)
+    worldX, worldY = math.floor(((worldX+self.offset[1]) / self.gridSize))+1, math.floor(((worldY+self.offset[2]) / self.gridSize))+1
+    return worldX, worldY
+end
+
+---@param indX integer
+---@param indY integer
+---@return boolean
+function Layer:isIndexValid(indX, indY)
+    return indX >= 1 and indY >= 1 and indX <= self.gridWidth and indY <= self.gridHeight
+end
+
+
+---@param type string
+---@return function iterator iterator that spits out entities
+function Layer:entitiesOfType(type)
+    local i = 0
+
+    local its =
+    ---@return ldtk.Entity|nil
+    function()
+        i = i + 1
+        while i >= 1 and i <= #self.entities do
+            if self.entities[i].identifier == type then
+                return self.entities[i]
+            else
+                i = i + 1
+            end
+        end
+        return nil
+    end
+    return its
 end
 
 --- Takes all the tiles in the layer(if it is an autolayer or tile layer)
@@ -224,10 +308,17 @@ function Level:new(object, parent)
     end
 end
 
+
+function Level:getValue(valueName)
+end
+
+---@param name string
+---@return ldtk.Layer|nil
 function Level:getLayer(name)
     for k, v in pairs(self.layers) do
         if v.identifier == name then return v end
     end
+    return nil
 end
 
 ---@class ldtk.Project

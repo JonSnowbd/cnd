@@ -1,5 +1,6 @@
 local Object = require "dep.classic"
 local interp = require "dep.interp"
+local vec    = require "dep.vec"
 
 ---@class Playground.Shader : Object
 ---@field needsTime boolean
@@ -35,8 +36,10 @@ end
 ---@field transitionEase function?
 ---@field finalOutputTransform love.Transform the transform used to draw the game canvas to the screen.
 ---@field debugFont love.Font
+---@field debugFontO love.Font outlined debug font
 ---@field barColor number[] When the window is sized incorrectly, this is the color of the blackbars
 ---@field camera Playground.Camera
+---@field previousMousePosition number[]
 local Playground = Object:extend()
 
 Playground.Shader = Shader
@@ -249,6 +252,12 @@ function Playground:disableCamera()
     love.graphics.pop()
 end
 
+function Playground:snapPosition(x,y)
+    local xSnap = 1.0/self.camera.zoom[1]
+    local ySnap = 1.0/self.camera.zoom[2]
+    return interp.snap(x, xSnap), interp.snap(y, ySnap)
+end
+
 --- Great for drawing complex objects, lets you treat everything
 --- as if it was in 'local' space. 
 ---@param x? number
@@ -287,12 +296,51 @@ function Playground:triggerTransition(duration, shaderName, shaderParams)
     end
     self.transitionTimes = {duration, duration}
 end
+
+--- Simple qol method to make a canvas that fits the playground
+---@return love.Canvas
+function Playground:makeLayer()
+    return love.graphics.newCanvas(self.size[1], self.size[2])
+end
+
+
+--- Gets the mouse position in relation to where the final output will be, taking
+--- into account RT size, window size, and black bars.
+---@return number mX
+---@return number mY
+function Playground:getMouse()
+    local mx, my = love.mouse.getPosition()
+    mx, my = self.finalOutputTransform:inverseTransformPoint(mx, my)
+    return mx, my
+end
+
+function Playground:getMouseDelta()
+    if self.previousMousePosition == nil then
+        return 0.0, 0.0
+    end
+    local mx, my = self:getMouse()
+    return mx - self.previousMousePosition[1], my - self.previousMousePosition[2]
+end
+--- Gets the mouse position in relation to where the final output will be, taking
+--- into account RT size, window size, and black bars, and camera transform.
+---@return number mX
+---@return number mY
+function Playground:getWorldMouse()
+    local mx, my = love.mouse.getPosition()
+    mx, my = self.finalOutputTransform:inverseTransformPoint(mx, my)
+    mx, my = self.camera:getTransform():inverseTransformPoint(mx, my)
+    return mx, my
+end
+
 --- To be called at AFTER your logic in update loop
 function Playground:update()
     local dt = love.timer.getDelta()
     if self.transitionTimes[1] >= 0.0 then
         self.transitionTimes[1] = self.transitionTimes[1] - dt
     end
+
+    local mx, my = self:getMouse()
+    self.previousMousePosition = {mx, my}
 end
 --- To be called AFTER your draw calls in the draw loop
 ---@param finalShader? string
@@ -324,34 +372,6 @@ function Playground:draw(finalShader, finalShaderData)
         self:unbindShader()
     end
 end
-
---- Simple qol method to make a canvas that fits the playground
----@return love.Canvas
-function Playground:makeLayer()
-    return love.graphics.newCanvas(self.size[1], self.size[2])
-end
-
-
---- Gets the mouse position in relation to where the final output will be, taking
---- into account RT size, window size, and black bars.
----@return number mX
----@return number mY
-function Playground:getMouse()
-    local mx, my = love.mouse.getPosition()
-    mx, my = self.finalOutputTransform:inverseTransformPoint(mx, my)
-    return mx, my
-end
---- Gets the mouse position in relation to where the final output will be, taking
---- into account RT size, window size, and black bars, and camera transform.
----@return number mX
----@return number mY
-function Playground:getWorldMouse()
-    local mx, my = love.mouse.getPosition()
-    mx, my = self.finalOutputTransform:inverseTransformPoint(mx, my)
-    mx, my = self.camera:getTransform():inverseTransformPoint(mx, my)
-    return mx, my
-end
-
 function Playground:new(width, height)
     self.size = {width, height}
     self.gameCanvas = love.graphics.newCanvas(width, height)
@@ -362,7 +382,8 @@ function Playground:new(width, height)
     self.previousShader = nil
     self.previousCanvas = nil
     self.transitionTimes = {-1,1}
-    self.debugFont = love.graphics.newFont("dep/font/pixel.fnt")
+    self.debugFont = love.graphics.newFont("dep/font/m5x7.fnt")
+    self.debugFontO = love.graphics.newFont("dep/font/m5x7O.fnt")
     self:makeShader("perlinTransition", "dep/shader/perlin_transition.ps.glsl")
     self:makeShader("fadeTransition", "dep/shader/fade_transition.ps.glsl")
     self:makeShader("pixelPlus", "dep/shader/pixel_plus.ps.glsl")

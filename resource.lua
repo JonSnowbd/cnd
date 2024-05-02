@@ -12,7 +12,7 @@ function ImageSheet:new(image, tileWidth, tileHeight)
     for y=1,math.floor(self.source:getHeight()/tileHeight) do
         self.quads[y] = {}
         for x=1,math.floor(self.source:getWidth()/tileWidth) do
-            self.quads[y][x] = love.graphics.newQuad(x*tileWidth, y*tileHeight, tileWidth, tileHeight, self.source:getWidth(), self.source:getHeight())
+            self.quads[y][x] = love.graphics.newQuad((x-1)*tileWidth, (y-1)*tileHeight, tileWidth, tileHeight, self.source:getWidth(), self.source:getHeight())
         end
     end
 end
