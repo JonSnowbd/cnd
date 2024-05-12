@@ -308,7 +308,10 @@ function Player:getRaw(name)
 	end
 end
 
--- gets the value of a control or axis pair with deadzone applied
+---gets the value of a control or axis pair with deadzone applied
+---@param name string input control name
+---@return number|nil
+---@return number|nil
 function Player:get(name)
 	if self._pairs[name] then
 		return self._pairs[name].x, self._pairs[name].y

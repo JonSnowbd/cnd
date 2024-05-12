@@ -1,6 +1,12 @@
 local Object = require "dep.classic"
 local json = require "dep.json"
 
+---@type love.Image|nil
+local latestImage
+
+---@type table<love.Image, love.Quad>
+local whiteTileLookup = {}
+
 ---@class Resource.ImageSheet : Object
 ---@field source love.Image
 ---@field quads love.Quad[][]
@@ -92,17 +98,15 @@ function NinePatch:draw(x, y, w, h, r, ox, oy)
     love.graphics.rotate(r or 0.0)
     love.graphics.translate((ox or 0.0)*-1.0, (oy or 0.0)*-1.0)
     love.graphics.translate(x, y)
-    self:rawDraw(x,y,w,h)
+    self:rawDraw(w,h)
     love.graphics.pop()
 end
 
 
 --- Draws without any transform logic
----@param x number x coordinate translation
----@param y number y coordinate translation
 ---@param w number width in pixels
 ---@param h number height in pixels
-function NinePatch:rawDraw(x, y, w, h)
+function NinePatch:rawDraw(w, h)
     local remainingWidth = w-self.left-self.right
     local remainingHeight = h-self.top-self.bottom
 
@@ -127,6 +131,20 @@ local Resource = Object:extend()
 
 Resource.ImageSheet = ImageSheet
 Resource.NinePatch = NinePatch
+
+---@param nextImage love.Image
+function Resource.setCurrentImage(nextImage)
+    latestImage = nextImage
+end
+
+--- sets a place on the image that will be used
+--- for efficient rectangles. just a spot on the texture thats pure #FFFFFF
+---@param img love.Image
+---@param x integer
+---@param y integer
+function Resource.setEfficientWhiteTile(img, x, y)
+    whiteTileLookup[img] = love.graphics.newQuad(x,y,1,1,img:getWidth(), img:getHeight())
+end
 
 function Resource:new(identity)
     love.filesystem.setIdentity(identity)
@@ -175,6 +193,12 @@ function Resource:load(userPath, defaultData, tight)
     end
 end
 
-
+-- TODO
+-- function Resource.efficientRect(x, y, w, h)
+--     if latestImage ~= nil and whiteTileLookup[latestImage] ~= nil then
+--         love.graphics.draw(latestImage, whiteTileLookup[latestImage], x, y, 0, w, h)
+--     end
+--     love.graphics.rectangle("fill", x,y,w,h)
+-- end
 
 return Resource

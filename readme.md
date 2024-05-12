@@ -71,7 +71,7 @@ function love.load()
         "content/"..locale..".lua"
     })
 
-    print(TR("welcomeMessage", {NAME = "John"}))
+    print(TR("welcomeMessage", {NAME = "John"})) -- Hello John!
 
 end
 ```

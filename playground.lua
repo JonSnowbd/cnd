@@ -242,7 +242,7 @@ function Playground:unbind()
     self.previousCanvas = nil
 end
 
---- Overrides the current transform(with a push, so dont forget to disable after to preserve your previous settings)
+--- Overrides the current transform(with a push, so dont forget to disable after, to preserve your previous settings)
 function Playground:enableCamera()
     love.graphics.push()
     love.graphics.replaceTransform(self.camera:getTransform())
@@ -252,6 +252,11 @@ function Playground:disableCamera()
     love.graphics.pop()
 end
 
+--- takes a 2d position and snaps it cleanly relative to the camera's zoom.
+---@param x number
+---@param y number
+---@return number
+---@return number
 function Playground:snapPosition(x,y)
     local xSnap = 1.0/self.camera.zoom[1]
     local ySnap = 1.0/self.camera.zoom[2]
@@ -305,7 +310,7 @@ end
 
 
 --- Gets the mouse position in relation to where the final output will be, taking
---- into account RT size, window size, and black bars.
+--- into account RT size, window size, and black bars, scaled to be 1:1 with your game size.
 ---@return number mX
 ---@return number mY
 function Playground:getMouse()
@@ -314,6 +319,9 @@ function Playground:getMouse()
     return mx, my
 end
 
+---Returns screen space mouse delta, relative to the final output transform.
+---@return number
+---@return number
 function Playground:getMouseDelta()
     if self.previousMousePosition == nil then
         return 0.0, 0.0
@@ -331,6 +339,7 @@ function Playground:getWorldMouse()
     mx, my = self.camera:getTransform():inverseTransformPoint(mx, my)
     return mx, my
 end
+
 
 --- To be called at AFTER your logic in update loop
 function Playground:update()

@@ -175,13 +175,6 @@ function Layer:new(object, parent)
                 y = y + 1
             end
         end
-        -- for y=1,h do
-        --     self.intgrid[y] = {}
-        --     for x=1,w do
-        --         local _1dIndex = (y-1 * w) + x
-        --         self.intgrid[y][x] = object["intGridCsv"][_1dIndex-1]
-        --     end
-        -- end
     end
 end
 
@@ -193,9 +186,9 @@ function Layer:addPathfinding(walkableInteger)
     end
     self.pathGrid = Grid:new(self.intgrid)
     ---@type Pathfinder
-    self.pathFinder = Pathfinder:new(self.pathGrid, "ASTAR", walkableInteger)
-
+    self.pathFinder = Pathfinder:new(self.pathGrid, "JPS", walkableInteger)
 end
+
 
 function Layer:hasPathfinding()
     return self.pathGrid ~= nil
@@ -352,6 +345,14 @@ function Project:new(fileData, filePath)
             self.tilesets[#self.tilesets+1] = Tileset(tiles[i], img, self)
         end
     end
+end
+
+---@return ldtk.Tileset|nil
+function Project:getTileset(name)
+    for i=1,#self.tilesets do
+        if self.tilesets[i].identifier == name then return self.tilesets[i] end
+    end
+    return nil
 end
 
 ---@param name string the identifier of the level.

@@ -20,6 +20,8 @@ end
 ---@field timeScale number
 local Jizz = Object:extend()
 
+Jizz.PhysicsProfile = PhysicsProfile
+
 function Jizz:new()
     self.cache = {}
     self.frame = 0
@@ -37,6 +39,12 @@ Jizz.Tight.flatApproach = 2.0
 Jizz.Tight.linearForce = 8.0
 Jizz.Tight.constantDamp = 5.0
 Jizz.Tight.dampNearTarget = {200, 15.0}
+---@type Jizz.PhysicsProfile
+Jizz.Gameplay = PhysicsProfile()
+Jizz.Gameplay.linearForce = 5.0
+Jizz.Gameplay.flatApproach = 3.0
+Jizz.Gameplay.constantDamp = 15.0
+Jizz.Gameplay.dampNearTarget = {80.0, 30.0}
 
 --- Moves the number from current towards towards. 
 ---@param current number
@@ -157,6 +165,10 @@ function Jizz:vector(currentX, currentY, targetX, targetY, id, profile)
     return currentX+velX, currentY+velY
     -- end
     -- return currentX, currentY
+end
+
+function Jizz:clearCache(key)
+    self.cache[key] = nil
 end
 
 function Jizz:update()
