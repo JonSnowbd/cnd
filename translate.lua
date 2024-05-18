@@ -22,8 +22,8 @@ function SET_TRANSLATION(translationFilePaths)
     current = {}
     local pathCount = #translationFilePaths
     for i=1,pathCount do
-        local i = love.filesystem.load(translationFilePaths[i])()
-        for k, v in pairs(i) do
+        local j = love.filesystem.load(translationFilePaths[i])()
+        for k, v in pairs(j) do
             current[k] = v
         end
     end

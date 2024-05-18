@@ -391,11 +391,11 @@ function Playground:new(width, height)
     self.previousShader = nil
     self.previousCanvas = nil
     self.transitionTimes = {-1,1}
-    self.debugFont = love.graphics.newFont("dep/font/m5x7.fnt")
-    self.debugFontO = love.graphics.newFont("dep/font/m5x7O.fnt")
-    self:makeShader("perlinTransition", "dep/shader/perlin_transition.ps.glsl")
-    self:makeShader("fadeTransition", "dep/shader/fade_transition.ps.glsl")
-    self:makeShader("pixelPlus", "dep/shader/pixel_plus.ps.glsl")
+    self.debugFont = love.graphics.newFont("dep/content/m5x7.fnt")
+    self.debugFontO = love.graphics.newFont("dep/content/m5x7O.fnt")
+    self:makeShader("perlinTransition", "dep/content/shader/perlin_transition.ps.glsl")
+    self:makeShader("fadeTransition", "dep/content/shader/fade_transition.ps.glsl")
+    self:makeShader("pixelPlus", "dep/content/shader/pixel_plus.ps.glsl")
     self.transitionShader = "fadeTransition"
     self.finalOutputTransform = love.math.newTransform()
     self.barColor = {0.0, 0.0, 0.0, 1.0}

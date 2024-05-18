@@ -1,9 +1,6 @@
 local Object = require("dep.classic")
 local json = require("dep.json")
 
-local Grid = require("dep.jumper.grid")
-local Pathfinder = require("dep.jumper.pathfinder")
-
 local ldtk = {}
 
 ---@class ldtk.FieldInstance : Object
@@ -178,32 +175,7 @@ function Layer:new(object, parent)
     end
 end
 
----If this is an intgrid, pathfinding and its functions are enabled.
----@param walkableInteger integer the integer on the map that means it is walkable.
-function Layer:addPathfinding(walkableInteger)
-    if self.layerType ~= "IntGrid" then
-        return
-    end
-    self.pathGrid = Grid:new(self.intgrid)
-    ---@type Pathfinder
-    self.pathFinder = Pathfinder:new(self.pathGrid, "JPS", walkableInteger)
-end
-
-
-function Layer:hasPathfinding()
-    return self.pathGrid ~= nil
-end
-
----comment
----@param startX integer
----@param startY integer
----@param endX integer
----@param endY integer
----@return Pathfinder.Path|nil
-function Layer:findPath(startX, startY, endX, endY)
-    return self.pathFinder:getPath(startX, startY, endX, endY)
-end
-
+--- Converts world coordinates to the layer indices.
 ---@param worldX number
 ---@param worldY number
 ---@return integer
@@ -213,6 +185,7 @@ function Layer:toIndex(worldX, worldY)
     return worldX, worldY
 end
 
+--- Returns true if the indices lay within the layer's bounds.
 ---@param indX integer
 ---@param indY integer
 ---@return boolean
@@ -220,15 +193,23 @@ function Layer:isIndexValid(indX, indY)
     return indX >= 1 and indY >= 1 and indX <= self.gridWidth and indY <= self.gridHeight
 end
 
+--- Use this when the assumption is that there is only one of these kinds of entities.
+--- Returns the first entity that has the type specified.
+---@param type string
+---@return ldtk.Entity|nil
+function Layer:getEntity(type)
+    for i=1,#self.entities do
+        if self.entities[i].identifier == type then return self.entities[i] end
+    end
+    return nil
+end
 
+--- Returns an iterator that retrieves entities of the specified type.
 ---@param type string
 ---@return function iterator iterator that spits out entities
 function Layer:entitiesOfType(type)
     local i = 0
-
-    local its =
-    ---@return ldtk.Entity|nil
-    function()
+    return function()
         i = i + 1
         while i >= 1 and i <= #self.entities do
             if self.entities[i].identifier == type then
@@ -239,7 +220,6 @@ function Layer:entitiesOfType(type)
         end
         return nil
     end
-    return its
 end
 
 --- Takes all the tiles in the layer(if it is an autolayer or tile layer)

@@ -3,8 +3,8 @@ local Resource = require "dep.resource"
 
 ---@class Interface : Object
 ---@field resourceInstance Resource|nil
----@field jizzInstance Jizz|nil
----@field jizzProfile Jizz.PhysicsProfile|nil
+---@field juiceInstance Juice|nil
+---@field juiceProfile Juice.PhysicsProfile|nil
 ---@field cursor number[]
 ---@field cursorDelta number[]
 ---@field horizontal number
@@ -35,7 +35,9 @@ function Interface:new()
     self.cursor = {0,0}
     self.cursorDelta = {0,0}
     self.focused = nil
+end
 
+function Interface:addDefaultRenderers()
     self.renderHandler["Font"] = function(fnt, msg, x, y, w, h)
         love.graphics.setFont(fnt)
         love.graphics.print(msg, x, y)
@@ -43,14 +45,6 @@ function Interface:new()
     self.renderHandler["NinePatch"] = function(val, data, x, y, w, h)
         Resource.NinePatch.draw(val, x, y, w, h)
     end
-
-    ---comment
-    ---@param val Resource.ImageSheet
-    ---@param data table
-    ---@param x number
-    ---@param y number
-    ---@param w number
-    ---@param h number
     self.renderHandler["ImageSheet"] = function(val, data, x, y, w, h)
         local t = data.type or "stretch"
         if t == "stretch" then
@@ -62,6 +56,17 @@ function Interface:new()
             local leftoverX = w-(val.tileSize[1]*s)
             local leftoverY = h-(val.tileSize[2]*s)
             Resource.ImageSheet.draw(val, data[1], data[2], x+(leftoverX*0.5), y+(leftoverY*0.5), 0, s, s)
+        end
+    end
+    self.renderHandler["Texture"] = function(val, data, x, y, w, h)
+        if data then
+            local xs = w/val.tileSize[1]
+            local ys = h/val.tileSize[2]
+            love.graphics.draw(val, data, x, y, 0, xs, ys)
+        else
+            local xs = w/val.tileSize[1]
+            local ys = h/val.tileSize[2]
+            love.graphics.draw(val, x, y, 0, xs, ys)
         end
     end
     self.renderHandler[true] = function(val, data, x, y, w, h)
@@ -150,7 +155,6 @@ end
 function Interface:update()
     for k,v in pairs(self.layoutStack) do
         if (self.currentFrame - v.requestedOn) > self.invalidationLifetime+1 then
-            print("Cleared "..k)
             self.layoutStack[k] = nil
             goto continue
         end

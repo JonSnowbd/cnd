@@ -2,7 +2,16 @@ local Object = require "dep.classic"
 local interp = require "dep.interp"
 local vec    = require "dep.vec"
 
----@class Jizz.PhysicsProfile
+---@class Juice.PhysicsMechanism
+local PhysicsMechanism = Object:extend()
+
+---@param context table
+function PhysicsMechanism:onVector(context)
+end
+---@param context table
+function PhysicsMechanism:onNumber(context)
+end
+---@class Juice.PhysicsProfile
 ---@field flatApproach? number the value approaches every frame at this rate, on top of velocity.
 ---@field linearForce? number
 ---@field constantDamp? number
@@ -12,48 +21,52 @@ local PhysicsProfile = Object:extend()
 function PhysicsProfile:new()
 end
 
-
-
----@class Jizz : Object
+---@class Juice : Object
 ---@field cache table<string, table>
 ---@field frame integer
 ---@field timeScale number
-local Jizz = Object:extend()
+local Juice = Object:extend()
 
-Jizz.PhysicsProfile = PhysicsProfile
+Juice.PhysicsProfile = PhysicsProfile
 
-function Jizz:new()
+function Juice:new()
     self.cache = {}
     self.frame = 0
     self.timeScale = 1.0
 end
 
----@type Jizz.PhysicsProfile
-Jizz.Smoothdamp = PhysicsProfile()
-Jizz.Smoothdamp.linearForce = 4.0
-Jizz.Smoothdamp.constantDamp = 2.0
-Jizz.Smoothdamp.dampNearTarget = {150.0, 5.0}
----@type Jizz.PhysicsProfile
-Jizz.Tight = PhysicsProfile()
-Jizz.Tight.flatApproach = 2.0
-Jizz.Tight.linearForce = 8.0
-Jizz.Tight.constantDamp = 5.0
-Jizz.Tight.dampNearTarget = {200, 15.0}
----@type Jizz.PhysicsProfile
-Jizz.Gameplay = PhysicsProfile()
-Jizz.Gameplay.linearForce = 8.0
-Jizz.Gameplay.flatApproach = 4.5
-Jizz.Gameplay.constantDamp = 19.0
-Jizz.Gameplay.dampNearTarget = {100.0, 30.0}
+--- Loose, slow, overshoots often.
+---@type Juice.PhysicsProfile
+Juice.Smoothdamp = PhysicsProfile()
+Juice.Smoothdamp.linearForce = 4.0
+Juice.Smoothdamp.constantDamp = 2.0
+Juice.Smoothdamp.dampNearTarget = {150.0, 5.0}
+
+--- Very fast, with much overshoot. Good for items flowing towards
+--- the player.
+---@type Juice.PhysicsProfile
+Juice.Tight = PhysicsProfile()
+Juice.Tight.flatApproach = 2.0
+Juice.Tight.linearForce = 8.0
+Juice.Tight.constantDamp = 5.0
+Juice.Tight.dampNearTarget = {200, 15.0}
+--- Suitable for gameplay elements that dont need to be too juicy,
+--- settles quickly into a position without too much overshoot.
+---@type Juice.PhysicsProfile
+Juice.Gameplay = PhysicsProfile()
+Juice.Gameplay.linearForce = 8.0
+Juice.Gameplay.flatApproach = 4.5
+Juice.Gameplay.constantDamp = 19.0
+Juice.Gameplay.dampNearTarget = {100.0, 30.0}
 
 --- Moves the number from current towards towards. 
 ---@param current number
 ---@param towards number
 ---@param id string
----@param profile? Jizz.PhysicsProfile You can provide a physics profile to modify behaviour. Jizz has some static members of defaults.
+---@param profile? Juice.PhysicsProfile You can provide a physics profile to modify behaviour. Juice has some static members of defaults.
 ---@return number
-function Jizz:number(current, towards, id, profile)
-    profile = profile or Jizz.Tight
+function Juice:number(current, towards, id, profile)
+    profile = profile or Juice.Tight
     local dt = love.timer.getDelta() * self.timeScale
     local c
     if self.cache[id] ~= nil and (self.frame - self.cache[id]["lastAccess"]) < 4 then
@@ -109,11 +122,11 @@ end
 ---@param targetX number
 ---@param targetY number
 ---@param id string
----@param profile? Jizz.PhysicsProfile You can provide a physics profile to modify behaviour. Jizz has some static members of defaults.
+---@param profile? Juice.PhysicsProfile You can provide a physics profile to modify behaviour. Juice has some static members of defaults.
 ---@return number X
 ---@return number Y
-function Jizz:vector(currentX, currentY, targetX, targetY, id, profile)
-    profile = profile or Jizz.Tight
+function Juice:vector(currentX, currentY, targetX, targetY, id, profile)
+    profile = profile or Juice.Tight
     local dt = love.timer.getDelta() * self.timeScale
     local c
     if self.cache[id] ~= nil and (self.frame - self.cache[id]["lastAccess"]) < 4 then
@@ -154,6 +167,15 @@ function Jizz:vector(currentX, currentY, targetX, targetY, id, profile)
     c["lastAccess"] = self.frame
     c["velocity"] = {velX, velY}
     c["previousTarget"] = {targetX, targetY}
+
+    if profile.flatApproach then
+        -- local fax, fay = vec.normalize(dirX, dirY)
+        -- fax, fay = vec.scale(fax, fay, profile.flatApproach)
+        return currentX+velX, currentY+velY
+    else
+        return currentX+velX, currentY+velY
+    end
+
     -- if profile.flatApproach then
     --     local ax, ay = vec.scale(dirX, dirY, profile.flatApproach)
     --     local approach = profile.flatApproach * dt
@@ -162,17 +184,17 @@ function Jizz:vector(currentX, currentY, targetX, targetY, id, profile)
     --     end
     --     return current+vel+(approach*dir)
     -- else
-    return currentX+velX, currentY+velY
+    
     -- end
     -- return currentX, currentY
 end
 
-function Jizz:clearCache(key)
+function Juice:clearCache(key)
     self.cache[key] = nil
 end
 
-function Jizz:update()
+function Juice:update()
     self.frame = self.frame + 1
 end
 
-return Jizz
+return Juice
