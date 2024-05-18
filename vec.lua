@@ -134,4 +134,8 @@ vec.floored = function(x, y)
     return math.floor(x), math.floor(y)
 end
 
+vec.isInRect = function(x, y, rx, ry, rw, rh)
+    return x >= rx and y >= ry and x <= rx+rw and y <= ry+rh
+end
+
 return vec

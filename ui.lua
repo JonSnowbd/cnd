@@ -1,122 +1,5 @@
 local Object = require "dep.classic"
-
----@class Interface.Layout.DrawCommand
----@field target any
----@field data any
----@field color number[]
----@field position number[]
----@field size number[]
-local DrawCommand = Object:extend()
-
-function DrawCommand:new(target, data, color)
-    self.target = target
-    self.data = data
-    self.color = color or {1.0, 1.0, 1.0, 1.0}
-    self.position = {0,0}
-    self.size = {0,0}
-end
-
----@param ui Interface
-function DrawCommand:draw(ui)
-    print("requesting")
-    local handler = ui:getHandler(self.target)
-    if handler == nil then
-        error("NO HANDLE FOR "..tostring(self.target))
-    end
-    love.graphics.setColor(self.color[1],self.color[2],self.color[3],self.color[4])
-    handler(self.target, self.data, self.position[1], self.position[2], self.size[1], self.size[2])
-end
-
----@class Interface.Layout
----@field id string
----@field parent Interface
----@field background Interface.Layout.DrawCommand|nil
----@field position number[]
----@field size number[]|nil
----@field origin number[]
----@field draws Interface.Layout.DrawCommand[]
----@field splat number[]
----@field remainingSpace number[]
----@field requestedOn integer
----@field widgets table<string,table>
----@field widgetOrder string[]
-local Layout = Object:extend()
-
-Layout.DrawCommand = DrawCommand
-
-function Layout:new(id, parent)
-    self.id = id
-    self.parent = parent
-    self.position = {0,0}
-    self.size = {0,0}
-    self.origin = {0,0}
-    self.draws = {}
-    self.splat = {0,0,0,0}
-    self.remainingSpace = {0,0}
-    self.requestedOn = parent.currentFrame
-    self.widgets = {}
-    self.widgetOrder = {}
-end
-
-function Layout:widgetIsHovered(id)
-    return false
-end
-function Layout:widgetIsFocused(id)
-    return false
-end
-function Layout:widgetIsClicked(id)
-    return false
-end
-function Layout:widgetIsDragged(id)
-    return false, 0.0, 0.0
-end
-
-function Layout:add(id, definition, overrides)
-    if self.widgets[id] == nil or (self.parent.currentFrame - (self.widgets[id].requestedOn or -9000)) > self.parent.invalidationLifetime then
-        print("Adding widget,"..tostring(overrides))
-        self.widgets[id] = {
-            definition = definition,
-            size = {},
-            state = {}
-        }
-    end
-    self.widgets[id].requestedOn = self.parent.currentFrame
-    self.widgets[id].overrides = overrides
-
-    if definition.getSize == nil then error("Control definitions need a getSize function.") end
-    self.widgets[id].size = definition.getSize(self, id, overrides)
-
-    self.widgetOrder[#self.widgetOrder+1] = id
-end
-
-function Layout:drawStandardBit(bit, bitData, color)
-    ---@type Interface.Layout.DrawCommand
-    local draw = DrawCommand(bit, bitData, color)
-    draw.position[1] = self.splat[1]
-    draw.position[2] = self.splat[2]
-    draw.size[1] = self.splat[3]
-    draw.size[2] = self.splat[4]
-    self.draws[#self.draws+1] = draw
-end
-
-function Layout:flushDraw()
-    for i=1,#self.draws do
-        print("?????")
-        self.draws[i]:draw(self.parent)
-    end
-end
-
-function Layout:finalize()
-    self.draws = {}
-    self.splat = {self.position[1], self.position[2], 0, 0}
-    for i=1,#self.widgetOrder do
-        local state = self.widgets[self.widgetOrder[i]]
-        self.splat[3] = state.size.size[1]
-        self.splat[4] = state.size.size[2]
-        state.definition.update(self, self.widgetOrder[i], state.overrides)
-    end
-    self.widgetOrder = {}
-end
+local Resource = require "dep.resource"
 
 ---@class Interface : Object
 ---@field resourceInstance Resource|nil
@@ -134,9 +17,10 @@ end
 ---@field currentFrame integer
 ---@field layoutStack Interface.Layout[]
 ---@field focused string|nil the full id of the widget currently focused.
+---@field defaultFont love.Font|nil
 local Interface = Object:extend()
 
-Interface.Layout = Layout
+Interface.Layout = require "dep.ui.layout"
 
 function Interface:new()
     self.horizontal = 0
@@ -156,16 +40,36 @@ function Interface:new()
         love.graphics.setFont(fnt)
         love.graphics.print(msg, x, y)
     end
+    self.renderHandler["NinePatch"] = function(val, data, x, y, w, h)
+        Resource.NinePatch.draw(val, x, y, w, h)
+    end
+
+    ---comment
+    ---@param val Resource.ImageSheet
+    ---@param data table
+    ---@param x number
+    ---@param y number
+    ---@param w number
+    ---@param h number
+    self.renderHandler["ImageSheet"] = function(val, data, x, y, w, h)
+        local t = data.type or "stretch"
+        if t == "stretch" then
+            local xs = w/val.tileSize[1]
+            local ys = h/val.tileSize[2]
+            Resource.ImageSheet.draw(val, data[1], data[2], x, y, 0, xs, ys)
+        elseif t == "center" then
+            local s = math.min(w/val.tileSize[1], h/val.tileSize[2])
+            local leftoverX = w-(val.tileSize[1]*s)
+            local leftoverY = h-(val.tileSize[2]*s)
+            Resource.ImageSheet.draw(val, data[1], data[2], x+(leftoverX*0.5), y+(leftoverY*0.5), 0, s, s)
+        end
+    end
     self.renderHandler[true] = function(val, data, x, y, w, h)
         love.graphics.rectangle("fill", x, y, w, h)
     end
     self.renderHandler[false] = function(val, data, x, y, w, h)
         love.graphics.rectangle("line", x, y, w, h)
     end
-end
-
-
-function Interface:createContext()
 end
 
 ---comment
@@ -186,8 +90,7 @@ function Interface:getHandler(obj)
         return self.renderHandler[meta]
     end
 
-    -- I guess its a literal then?
-    return self.renderHandler[obj]
+    error("UI has no idea how to handle whatever it is you just passed as a render obj: "..tostring(obj))
 end
 
 function Interface:newFrame()
@@ -217,8 +120,8 @@ end
 ---@param id string unique id for this window.
 ---@param x number
 ---@param y number
----@param xO number origin, normalized. 0.5 = middle, 0.0 = left, 1.0 = right
----@param yO number origin, normalized. 0.5 = middle, 0.0 = up, 1.0 = down
+---@param xO number|nil origin, normalized. 0.5 = middle, 0.0 = left, 1.0 = right, default is 0.0
+---@param yO number|nil origin, normalized. 0.5 = middle, 0.0 = up, 1.0 = down, default is 0.0
 ---@param w number|nil
 ---@param h number|nil
 ---@return Interface.Layout|nil
@@ -233,103 +136,42 @@ function Interface:start(id, x, y, xO, yO, w, h)
     if shouldCreate then
         ---@type Interface.Layout
         local newLayout = Interface.Layout(id, self)
-        newLayout.position = {x,y}
-        newLayout.origin = {xO, yO}
-        newLayout.requestedOn = self.currentFrame
-        if w ~= nil and h ~= nil then
-            newLayout.size = {w,h}
-        end
         self.layoutStack[id] = newLayout
-        return self.layoutStack[id]
     end
-
+    self.layoutStack[id].background = nil
     self.layoutStack[id].requestedOn = self.currentFrame
+    self.layoutStack[id].position = {x,y}
+    self.layoutStack[id].size = {w or 0.0, h or 0.0}
+    self.layoutStack[id].origin = {xO or 0.0, yO or 0.0}
     return self.layoutStack[id]
-end
-
-
----Places a new element into the layout, 
----@param layout Interface.Layout the control's state identifier. This should be unique.
----@param control table The control definition, eg `Interface.Button`
----@param overrides any|nil Overrides for the control's table
-function Interface:element(layout, controlID, control, overrides)
-    layout:add(controlID, control, overrides)
 end
 
 --- Called at the end of your update.
 function Interface:update()
     for k,v in pairs(self.layoutStack) do
-        v:finalize()
+        if (self.currentFrame - v.requestedOn) > self.invalidationLifetime+1 then
+            print("Cleared "..k)
+            self.layoutStack[k] = nil
+            goto continue
+        end
+        v:finalize(true)
+        v:finalize(false)
+        ::continue::
     end
     self.currentFrame = self.currentFrame + 1
 end
 
----@class Interface.Button
----@field text string
----@field background any The default background for the button, can be any renderable resource or nil.
----@field grow number|nil Will fill width if possible. If supplied, supply as weight.
----@field minimumWidth number The smallest it can get.
----@field minimumHeight number The smallest it can get.
----@field pressed function What happens when pressed.
----@field getSize function returns table like {size={0,0}, flex={-1,-1}}
----@field update function Controls moving the playhead to the next 
-Interface.Button = {}
 
-Interface.Button.text = "Button"
-Interface.Button.background = nil
----@type love.Font|nil
-Interface.Button.font = nil
-Interface.Button.minimumWidth = 16.0
-Interface.Button.minimumHeight = 16.0
-Interface.Button.makeContext=function(ctx)
-end
-Interface.Button.pressed=function()
-end
----@param face Interface.Layout
----@param id string
----@param ovr table
-Interface.Button.getSize=function(face, id, ovr)
-    local mw = ovr.minimumWidth or Interface.Button.minimumWidth
-    local mh = ovr.minimumHeight or Interface.Button.minimumHeight
-
-    ---@type love.Font
-    local font = ovr.font or Interface.Button.font
-
-    local fw = font:getWidth(ovr.text or Interface.Button.text)
-    return {
-        size = {math.max(mw, fw), math.max(font:getHeight(), mh)},
-        flex = {
-            ovr.grow or Interface.Button.grow or -1.0,
-            -1.0
-        },
-    }
-end
----@param face Interface.Layout
----@param id string
----@param ovr table
-Interface.Button.update=function(face, id, ovr)
-    local color = {0.7, 0.7, 0.7, 1.0}
-    if face:widgetIsHovered(id) then
-        color = {1.0, 1.0, 1.0, 1.0}
-    end
-
-    if face:widgetIsClicked(id) then
-        local fn = ovr.pressed or Interface.Button.pressed
-        fn()
-    end
-    face:drawStandardBit(true, color)
-    face:drawStandardBit(ovr.font or Interface.Button.font, ovr.text or Interface.Button.text, {1.0, 1.0, 1.0, 1.0})
-end
+Interface.Button = require "dep.ui.button"
+Interface.Label = require "dep.ui.label"
+Interface.Image = require "dep.ui.image"
+Interface.Slider = require "dep.ui.slider"
 
 
 function Interface:draw()
     for k,v in pairs(self.layoutStack) do
-        ---@type Interface.Layout
-        local l = self.layoutStack[k]
-        if l.requestedOn == self.currentFrame then
-            love.graphics.setColor(1.0, 1.0, 1.0, 0.1)
-            love.graphics.rectangle("fill", l.position[1], l.position[2], l.size[1], l.size[2])
-            l:flushDraw()
+        if v.requestedOn == self.currentFrame-1 then
+            v:flushDraw()
         end
     end
     love.graphics.setColor(1.0, 1.0, 1.0, 1.0)

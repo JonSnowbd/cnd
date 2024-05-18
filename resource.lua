@@ -1,20 +1,16 @@
 local Object = require "dep.classic"
 local json = require "dep.json"
 
----@type love.Image|nil
-local latestImage
-
----@type table<love.Image, love.Quad>
-local whiteTileLookup = {}
-
 ---@class Resource.ImageSheet : Object
 ---@field source love.Image
 ---@field quads love.Quad[][]
+---@field tileSize number[]
 local ImageSheet = Object:extend()
 
 function ImageSheet:new(image, tileWidth, tileHeight)
     self.source = image
     self.quads = {}
+    self.tileSize = {tileWidth, tileHeight}
     for y=1,math.floor(self.source:getHeight()/tileHeight) do
         self.quads[y] = {}
         for x=1,math.floor(self.source:getWidth()/tileWidth) do
@@ -37,6 +33,8 @@ function ImageSheet:draw(xSprite, ySprite, x, y, r, xs, ys, ox, oy)
     love.graphics.draw(self.source, self.quads[ySprite][xSprite], x or 0.0, y or 0.0, r or 0.0, xs or 1.0, ys or 1.0, ox or 0.0, oy or 0.0)
 end
 
+function ImageSheet:type() return "ImageSheet" end
+
 
 ---@class Resource.NinePatch : Object
 ---@field source love.Image
@@ -48,6 +46,8 @@ end
 ---@field right number
 ---@field bottom number
 local NinePatch = Object:extend()
+
+function NinePatch:type() return "NinePatch" end
 
 ---comment
 ---@param image love.Image
@@ -132,24 +132,9 @@ local Resource = Object:extend()
 Resource.ImageSheet = ImageSheet
 Resource.NinePatch = NinePatch
 
----@param nextImage love.Image
-function Resource.setCurrentImage(nextImage)
-    latestImage = nextImage
-end
-
---- sets a place on the image that will be used
---- for efficient rectangles. just a spot on the texture thats pure #FFFFFF
----@param img love.Image
----@param x integer
----@param y integer
-function Resource.setEfficientWhiteTile(img, x, y)
-    whiteTileLookup[img] = love.graphics.newQuad(x,y,1,1,img:getWidth(), img:getHeight())
-end
-
 function Resource:new(identity)
     love.filesystem.setIdentity(identity)
 end
-
 
 local dirOf = function(filePath)
     return filePath:match("(.*/)")
@@ -192,13 +177,5 @@ function Resource:load(userPath, defaultData, tight)
         return defaultData
     end
 end
-
--- TODO
--- function Resource.efficientRect(x, y, w, h)
---     if latestImage ~= nil and whiteTileLookup[latestImage] ~= nil then
---         love.graphics.draw(latestImage, whiteTileLookup[latestImage], x, y, 0, w, h)
---     end
---     love.graphics.rectangle("fill", x,y,w,h)
--- end
 
 return Resource

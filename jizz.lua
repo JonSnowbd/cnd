@@ -41,10 +41,10 @@ Jizz.Tight.constantDamp = 5.0
 Jizz.Tight.dampNearTarget = {200, 15.0}
 ---@type Jizz.PhysicsProfile
 Jizz.Gameplay = PhysicsProfile()
-Jizz.Gameplay.linearForce = 5.0
-Jizz.Gameplay.flatApproach = 3.0
-Jizz.Gameplay.constantDamp = 15.0
-Jizz.Gameplay.dampNearTarget = {80.0, 30.0}
+Jizz.Gameplay.linearForce = 8.0
+Jizz.Gameplay.flatApproach = 4.5
+Jizz.Gameplay.constantDamp = 19.0
+Jizz.Gameplay.dampNearTarget = {100.0, 30.0}
 
 --- Moves the number from current towards towards. 
 ---@param current number
