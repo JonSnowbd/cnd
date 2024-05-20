@@ -22,10 +22,10 @@ pathfind.distance = function(x1, y1, x2, y2)
   return s
 end
 
--- (Internal) Return the score of a node.
--- G is the cost from START to this node.
--- H is a heuristic cost, in this case the distance from this node to the goal.
--- Returns F, the sum of G and H.
+--- (Internal) Return the score of a node.
+--- G is the cost from START to this node.
+--- H is a heuristic cost, in this case the distance from this node to the goal.
+--- Returns F, the sum of G and H.
 pathfind.calculateScore = function (previous, node, goal)
     local G = previous.score + 1
     local H = pathfind.distance(node[1], node[2], goal[1], goal[2])
@@ -90,17 +90,27 @@ local function getAdjacent(width, height, node, positionIsOpenFunc, includeDiago
 end
 
 -- Returns the path from start to goal, or false if no path exists.
+---@param width integer
+---@param height integer
+---@param start integer[]
+---@param goal integer[]
+---@param positionIsOpenFunc fun(x: integer, y: integer):boolean a callback, if it returns true, a cell is considered walkable.
+---@param excludeDiagonalMoving boolean
+---@return integer[][]|false
 function pathfind.find(width, height, start, goal, positionIsOpenFunc, excludeDiagonalMoving)
 
     local success = false
     local open = { }
     local closed = { }
 
-    start.score = 0
-    start.G = 0
-    start.H = pathfind.distance(start[1], start[2], goal[1], goal[2])
-    start.parent = {0, 0}
-    table.insert(open, start)
+    ---@type table
+    local beginning = {start[1], start[2]}
+
+    beginning.score = 0
+    beginning.G = 0
+    beginning.H = pathfind.distance(beginning[1], beginning[2], goal[1], goal[2])
+    beginning.parent = {0, 0}
+    table.insert(open, beginning)
 
     while not success and #open > 0 do
 

@@ -1,6 +1,5 @@
 local Object = require "dep.classic"
 local interp = require "dep.interp"
-local vec    = require "dep.vec"
 
 ---@class Playground.Shader : Object
 ---@field needsTime boolean
@@ -8,6 +7,7 @@ local vec    = require "dep.vec"
 ---@field needsWindowSize boolean
 ---@field needsCanvasSize boolean
 ---@field raw love.Shader
+---@overload fun(psFileData: string, vsFileData: string|nil) : Playground.Shader
 local Shader = Object:extend()
 
 function Shader:new(psFileData,vsFileData)
@@ -40,6 +40,7 @@ end
 ---@field barColor number[] When the window is sized incorrectly, this is the color of the blackbars
 ---@field camera Playground.Camera
 ---@field previousMousePosition number[]
+---@overload fun(width: integer, height: integer): Playground
 local Playground = Object:extend()
 
 Playground.Shader = Shader
@@ -70,16 +71,19 @@ function Camera:move(x, y)
     self.position[1] = self.position[1] + x
     self.position[2] = self.position[2] + y
 end
+
 function Camera:setPosition(x, y)
     self.dirty = true
     self.position[1] = x
     self.position[2] = y
 end
+
 ---@param r number in radians
 function Camera:rotate(r)
     self.dirty = true
     self.rotation = self.rotation + r
 end
+
 ---@param r number in radians
 function Camera:setRotation(r)
     self.dirty = true
@@ -308,7 +312,6 @@ function Playground:makeLayer()
     return love.graphics.newCanvas(self.size[1], self.size[2])
 end
 
-
 --- Gets the mouse position in relation to where the final output will be, taking
 --- into account RT size, window size, and black bars, scaled to be 1:1 with your game size.
 ---@return number mX
@@ -329,6 +332,7 @@ function Playground:getMouseDelta()
     local mx, my = self:getMouse()
     return mx - self.previousMousePosition[1], my - self.previousMousePosition[2]
 end
+
 --- Gets the mouse position in relation to where the final output will be, taking
 --- into account RT size, window size, and black bars, and camera transform.
 ---@return number mX
@@ -340,7 +344,6 @@ function Playground:getWorldMouse()
     return mx, my
 end
 
-
 --- To be called at AFTER your logic in update loop
 function Playground:update()
     local dt = love.timer.getDelta()
@@ -351,6 +354,7 @@ function Playground:update()
     local mx, my = self:getMouse()
     self.previousMousePosition = {mx, my}
 end
+
 --- To be called AFTER your draw calls in the draw loop
 ---@param finalShader? string
 ---@param finalShaderData? table

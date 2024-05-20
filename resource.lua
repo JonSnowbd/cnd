@@ -127,6 +127,8 @@ function NinePatch:rawDraw(w, h)
 end
 
 ---@class Resource : Object
+---@field identity string
+---@overload fun(identity: string): Resource
 local Resource = Object:extend()
 
 Resource.ImageSheet = ImageSheet
@@ -134,6 +136,7 @@ Resource.NinePatch = NinePatch
 
 function Resource:new(identity)
     love.filesystem.setIdentity(identity)
+    self.identity = identity
 end
 
 local dirOf = function(filePath)
@@ -146,7 +149,9 @@ end
 ---@param tight boolean if true, compresses.
 function Resource:sync(userPath, data, tight)
     local dir = dirOf(userPath)
-    love.filesystem.createDirectory(dir)
+    if dir ~= nil and dir ~= "" then
+        love.filesystem.createDirectory(dir)
+    end
     if tight then
         local data = love.data.compress("string", "gzip", json.encode(data))
         love.filesystem.write(userPath, data)

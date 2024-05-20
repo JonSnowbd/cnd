@@ -1,63 +1,279 @@
+---@diagnostic disable: param-type-mismatch
 local Object = require "dep.classic"
 local interp = require "dep.interp"
 local vec    = require "dep.vec"
 
----@class Juice.PhysicsMechanism
+
+---@class Juice.Context
+---@field id string
+---@field parent Juice
+---@field dt number
+---@field isVector boolean
+---@field value number[]|number
+---@field target number[]|number
+---@field previousValue number[]|number
+---@field previousTarget number[]|number
+---@field velocity number[]|number
+---@field requestedOn integer
+---@field state table
+---@overload fun(id: string, parent: Juice, value: number[]|number, target: number[]|number, isVector: boolean): Juice.Context
+local Context = Object:extend()
+
+---@param id string
+---@param parent Juice
+---@param value number[]|number
+---@param target number[]|number
+---@param isVector boolean
+function Context:new(id, parent, value, target, isVector)
+    self.dt = 0.0
+    self.id = id
+    self.parent = parent
+    self.isVector = isVector
+    self.requestedOn = parent.frame
+    if isVector then
+        self.value = {}
+        self.value[1], self.value[2] = value[1], value[2]
+        self.previousValue = {}
+        self.previousValue[1], self.previousValue[2] = value[1], value[2]
+        self.target = {}
+        self.target[1], self.target[2] = target[1], target[2]
+        self.previousTarget = {}
+        self.previousTarget[1], self.previousTarget[2] = target[1], target[2]
+        self.velocity = {0.0, 0.0}
+    else
+        self.value = value
+        self.previousValue = value
+        self.target = target
+        self.previousTarget = target
+        self.velocity = 0.0
+    end
+    self.state = {}
+end
+
+---@return boolean fresh true if valid data.
+function Context:fresh()
+    return (self.parent.frame - self.requestedOn) < 10
+end
+
+
+---@class Juice.PhysicsMechanism : Object
 local PhysicsMechanism = Object:extend()
 
----@param context table
-function PhysicsMechanism:onVector(context)
+---@param context Juice.Context
+function PhysicsMechanism:affector(context)
 end
----@param context table
-function PhysicsMechanism:onNumber(context)
+---@param context Juice.Context
+function PhysicsMechanism:postAffector(context)
 end
----@class Juice.PhysicsProfile
----@field flatApproach? number the value approaches every frame at this rate, on top of velocity.
----@field linearForce? number
----@field constantDamp? number
----@field dampNearTarget? number[] [1] = how close for this to activate, [2] = multiplier
+
+
+---@class Juice.LinearForceMechanism : Juice.PhysicsMechanism
+---@field force number How strong the pull towards target is, in pixels per second.
+---@overload fun(force: number): Juice.LinearForceMechanism
+local LinearForceMechanism = PhysicsMechanism:extend()
+
+---@param force number
+function LinearForceMechanism:new(force)
+    self.force = force
+end
+
+---@param context Juice.Context
+function LinearForceMechanism:affector(context)
+    if context.isVector then
+        local x,y = vec.sub(context.target[1], context.target[2], context.value[1], context.value[2])
+        x,y = vec.normalize(x,y)
+        x,y = vec.scale(x,y, self.force*context.dt)
+        context.velocity[1] = context.velocity[1] + x
+        context.velocity[2] = context.velocity[2] + y
+    else
+        local diff = interp.sign(context.target - context.value)
+        context.velocity = context.velocity + (diff * self.force * context.dt)
+    end
+    
+end
+---@param context Juice.Context
+function LinearForceMechanism:postAffector(context)
+end
+
+---@class Juice.DampForceMechanism : Juice.PhysicsMechanism
+---@field constantDamp number|nil
+---@field proximityDamp number|nil
+---@field proximityRadius number|nil
+---@overload fun(constant: number|nil, proxDamp: number|nil, proxRad: number|nil): Juice.DampForceMechanism
+local DampForceMechanism = PhysicsMechanism:extend()
+
+---comment
+---@param constant number|nil
+---@param prox number|nil
+---@param rad number|nil
+function DampForceMechanism:new(constant, prox, rad)
+    self.constantDamp = constant
+    self.proximityDamp = prox
+    self.proximityRadius = rad
+end
+
+---@param context Juice.Context
+function DampForceMechanism:affector(context)
+    if context.isVector then
+        -- local x, y = vec.scale(context.velocity[1], context.velocity[2], (self.constantDamp * context.dt))
+        if self.constantDamp then
+            context.velocity[1], context.velocity[2] = vec.scale(context.velocity[1], context.velocity[2], 1.0-(self.constantDamp*context.dt))
+        end
+        if self.proximityDamp ~= nil and self.proximityRadius ~= nil then
+            local dist = vec.distance(context.value[1], context.value[2], context.target[1], context.target[2])
+            local prox = interp.clamp((dist / self.proximityRadius), 0.0, 1.0)
+            local damp = interp.lerp(1.0, 0.0, prox, interp.circ.out)
+            context.velocity[1], context.velocity[2] = vec.scale(context.velocity[1], context.velocity[2], 1.0-(self.proximityDamp*damp*context.dt))
+        end
+    else
+        if self.constantDamp ~= nil then
+            context.velocity = context.velocity * (1.0-(self.constantDamp*context.dt))
+        end
+        if self.proximityDamp ~= nil and self.proximityRadius ~= nil then
+            local dist = math.abs(context.target - context.value)
+            local prox = interp.clamp((dist / self.proximityRadius), 0.0, 1.0)
+            local damp = interp.lerp(1.0, 0.0, prox, interp.circ.out)
+            context.velocity = context.velocity * (1.0-(self.proximityDamp*damp*context.dt))
+        end
+    end
+end
+---@param context Juice.Context
+function DampForceMechanism:postAffector(context)
+end
+
+---@class Juice.InheritVelocityMechanism : Juice.PhysicsMechanism
+---@field amount number
+---@field proximityRadius number|nil
+---@overload fun(amount: number, proxRad: number|nil): Juice.InheritVelocityMechanism
+local InheritVelocityMechanism = PhysicsMechanism:extend()
+
+---@param amount number
+---@param rad number|nil
+function InheritVelocityMechanism:new(amount, rad)
+    self.amount = amount
+    self.proximityRadius = rad
+end
+
+---@param context Juice.Context
+function InheritVelocityMechanism:affector(context)
+    if context.isVector then
+        local dx, dy = vec.sub(context.target[1], context.target[2], context.previousTarget[1], context.previousTarget[2])
+        dx, dy = vec.scale(dx, dy, self.amount*context.dt)
+        if self.proximityRadius ~= nil then
+            local dist = vec.distance(context.value[1], context.value[2], context.target[1], context.target[2])
+            local prox = interp.clamp((dist / self.proximityRadius), 0.0, 1.0)
+            local damp = interp.lerp(1.0, 0.0, prox, interp.circ.out)
+            dx, dy = vec.scale(dx, dy, damp)
+        else
+            context.velocity[1], context.velocity[2] = vec.add(context.velocity[1], context.velocity[2], dx, dy)
+        end
+    else
+        local delta = (context.target - context.previousTarget) * (self.amount * context.dt)
+
+        if self.proximityRadius ~= nil then
+            local dist = math.abs(context.target - context.value)
+            local prox = interp.clamp((dist / self.proximityRadius), 0.0, 1.0)
+            local damp = interp.lerp(1.0, 0.0, prox, interp.circ.out)
+            delta = delta * damp
+        end
+        context.velocity = context.velocity + delta
+    end
+end
+---@param context Juice.Context
+function InheritVelocityMechanism:postAffector(context)
+end
+
+---@class Juice.ConstantApproachMechanism : Juice.PhysicsMechanism
+---@field amount number
+---@overload fun(amount: number): Juice.ConstantApproachMechanism
+local ConstantApproachMechanism = PhysicsMechanism:extend()
+
+---@param amount number
+function ConstantApproachMechanism:new(amount)
+    self.amount = amount
+end
+
+---@param context Juice.Context
+function ConstantApproachMechanism:affector(context)
+end
+---@param context Juice.Context
+function ConstantApproachMechanism:postAffector(context)
+    local force = self.amount * context.dt
+    if context.isVector then
+        local dx, dy = vec.sub(context.target[1], context.target[2], context.value[1], context.value[2])
+        if force >= vec.length(dx, dy) then
+            context.value[1], context.value[2] = context.target[1], context.target[2]
+        else
+            dx, dy = vec.normalize(dx, dy)
+            dx, dy = vec.scale(dx, dy, force)
+            context.value[1], context.value[2] = vec.add(context.value[1], context.value[2], dx, dy)
+        end
+    else
+        local diff = context.target-context.value
+        if force >= math.abs(diff) then
+            context.value = context.target
+        else
+            local sign = interp.sign(diff) * force
+            context.value = context.value + sign
+        end
+    end
+end
+
+---@class Juice.PhysicsProfile : Object
+---@field mechanisms Juice.PhysicsMechanism[]
 local PhysicsProfile = Object:extend()
 
 function PhysicsProfile:new()
+    self.mechanisms = {}
+end
+
+---comment
+---@param mechanism Juice.PhysicsMechanism
+function PhysicsProfile:addMechanism(mechanism)
+    self.mechanisms[#self.mechanisms+1] = mechanism
 end
 
 ---@class Juice : Object
----@field cache table<string, table>
+---@field cache table<string, Juice.Context>
+---@field bits table<string, any>
 ---@field frame integer
 ---@field timeScale number
 local Juice = Object:extend()
 
 Juice.PhysicsProfile = PhysicsProfile
+Juice.PhysicsMechanism = PhysicsMechanism
+Juice.Context = Context
+Juice.TagWorldDraw = "__tagWorldDraw"
+Juice.TagScreenDraw = "__tagScreenDraw"
+Juice.TagFinalDraw = "__tagFinalDraw"
 
 function Juice:new()
     self.cache = {}
     self.frame = 0
     self.timeScale = 1.0
+    self.bits = {}
 end
 
 --- Loose, slow, overshoots often.
 ---@type Juice.PhysicsProfile
 Juice.Smoothdamp = PhysicsProfile()
-Juice.Smoothdamp.linearForce = 4.0
-Juice.Smoothdamp.constantDamp = 2.0
-Juice.Smoothdamp.dampNearTarget = {150.0, 5.0}
+Juice.Smoothdamp:addMechanism(LinearForceMechanism(10.5))
+Juice.Smoothdamp:addMechanism(DampForceMechanism(1.25, 6.0, 80.0))
+Juice.Smoothdamp:addMechanism(ConstantApproachMechanism(10.0))
 
---- Very fast, with much overshoot. Good for items flowing towards
---- the player.
+--- Fast, small overshoots.
 ---@type Juice.PhysicsProfile
 Juice.Tight = PhysicsProfile()
-Juice.Tight.flatApproach = 2.0
-Juice.Tight.linearForce = 8.0
-Juice.Tight.constantDamp = 5.0
-Juice.Tight.dampNearTarget = {200, 15.0}
---- Suitable for gameplay elements that dont need to be too juicy,
---- settles quickly into a position without too much overshoot.
+Juice.Tight:addMechanism(LinearForceMechanism(15))
+Juice.Tight:addMechanism(DampForceMechanism(2, 20.0, 80.0))
+Juice.Tight:addMechanism(ConstantApproachMechanism(10.0))
+
+--- Suitable for gameplay elements the camera tracks. Not too wild.
 ---@type Juice.PhysicsProfile
 Juice.Gameplay = PhysicsProfile()
-Juice.Gameplay.linearForce = 8.0
-Juice.Gameplay.flatApproach = 4.5
-Juice.Gameplay.constantDamp = 19.0
-Juice.Gameplay.dampNearTarget = {100.0, 30.0}
+Juice.Gameplay:addMechanism(LinearForceMechanism(6))
+Juice.Gameplay:addMechanism(DampForceMechanism(1, 20.0, 40.0))
+Juice.Gameplay:addMechanism(ConstantApproachMechanism(15.0))
 
 --- Moves the number from current towards towards. 
 ---@param current number
@@ -66,135 +282,101 @@ Juice.Gameplay.dampNearTarget = {100.0, 30.0}
 ---@param profile? Juice.PhysicsProfile You can provide a physics profile to modify behaviour. Juice has some static members of defaults.
 ---@return number
 function Juice:number(current, towards, id, profile)
-    profile = profile or Juice.Tight
+    local prof = profile or Juice.Smoothdamp
+    ---@type Juice.Context
+    local ctx
+    if self.cache[id] == nil or self.cache[id]:fresh() == false then
+        self.cache[id] = Context(id, self, current, towards, false)
+        ctx = self.cache[id]
+    else
+        ctx = self.cache[id]
+    end
     local dt = love.timer.getDelta() * self.timeScale
-    local c
-    if self.cache[id] ~= nil and (self.frame - self.cache[id]["lastAccess"]) < 4 then
-        c = self.cache[id]
-    else
-        c = {
-            lastAccess = self.frame,
-            velocity = 0.0,
-            previousTarget = towards,
-        }
-        self.cache[id] = c
+
+    ctx.value = current
+    ctx.target = towards
+    ctx.requestedOn = self.frame
+    ctx.dt = dt
+
+
+    for i=1,#prof.mechanisms do
+        prof.mechanisms[i]:affector(ctx)
+    end
+    ctx.value = ctx.value + ctx.velocity
+    for i=1,#prof.mechanisms do
+        prof.mechanisms[i]:postAffector(ctx)
     end
 
-    local distance = towards-current
-    local absDist = math.abs(distance)
-    local dir = interp.sign(distance)
-    -- 0.0 = completely ontop, 1.0 = farther than limit
-
-
-    ---@type number
-    local vel = c["velocity"]
-
-    if profile.linearForce then
-        vel = vel + (dir * profile.linearForce * dt)
-    end
-    if profile.constantDamp then
-        vel = vel * (1.0-(profile.constantDamp*dt))
-    end
-    if profile.dampNearTarget then
-        local locality = interp.clamp(interp.remap(absDist, 0.0, profile.dampNearTarget[1], 1.0, 0.0), 0.0, 1.0)
-        locality = interp.lerp(0.0, 1.0, locality, interp.quart.into)
-        local damp = 1.0-((profile.dampNearTarget[2]*dt) * locality)
-        vel = vel * damp
-    end
-
-
-    c["lastAccess"] = self.frame
-    c["velocity"] = vel
-    c["previousTarget"] = towards
-    if profile.flatApproach then
-        local approach = profile.flatApproach * dt
-        if interp.within(current+vel, towards, approach*1.3) then
-            return towards
-        end
-        return current+vel+(approach*dir)
-    else
-        return current+vel
-    end
+    ctx.previousTarget = ctx.target
+    ctx.previousValue = ctx.value
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return ctx.value
 end
 --- Moves the number from current towards towards. 
----@param currentX number
----@param currentY number
----@param targetX number
----@param targetY number
+---@param current number[]
+---@param towards number[]
 ---@param id string
 ---@param profile? Juice.PhysicsProfile You can provide a physics profile to modify behaviour. Juice has some static members of defaults.
----@return number X
----@return number Y
-function Juice:vector(currentX, currentY, targetX, targetY, id, profile)
-    profile = profile or Juice.Tight
+---@return number
+---@return number
+function Juice:vector(current, towards, id, profile)
+    local prof = profile or Juice.Smoothdamp
+    ---@type Juice.Context
+    local ctx
+    if self.cache[id] == nil or self.cache[id]:fresh() == false then
+        self.cache[id] = Context(id, self, current, towards, true)
+        ctx = self.cache[id]
+    else
+        ctx = self.cache[id]
+    end
     local dt = love.timer.getDelta() * self.timeScale
-    local c
-    if self.cache[id] ~= nil and (self.frame - self.cache[id]["lastAccess"]) < 4 then
-        c = self.cache[id]
-    else
-        c = {
-            lastAccess = self.frame,
-            velocity = {0.0, 0.0},
-            previousTarget = {targetX, targetY},
-        }
-        self.cache[id] = c
+
+    ctx.value[1], ctx.value[2] = current[1], current[2]
+    ctx.target[1], ctx.target[2] = towards[1], towards[2]
+    ctx.requestedOn = self.frame
+    ctx.dt = dt
+
+
+    for i=1,#prof.mechanisms do
+        prof.mechanisms[i]:affector(ctx)
+    end
+    local newX, newY = vec.add(ctx.value[1], ctx.value[2], ctx.velocity[1], ctx.velocity[2])
+    ctx.value[1], ctx.value[2] = newX, newY
+    for i=1,#prof.mechanisms do
+        prof.mechanisms[i]:postAffector(ctx)
     end
 
-    local distance = vec.distance(currentX, currentY, targetX, targetY)
-    
-    local absDist = math.abs(distance)
-    local dirX, dirY = vec.sub(targetX, targetY, currentX, currentY)
+    ctx.previousTarget[1], ctx.previousTarget[2] = ctx.target[1], ctx.target[2]
+    ctx.previousValue[1], ctx.previousValue[2] = ctx.value[1], ctx.value[2]
 
-    ---@type number
-    local velX = c["velocity"][1]
-    local velY = c["velocity"][2]
-
-    if profile.linearForce then
-        local fx, fy = vec.scale(dirX, dirY, profile.linearForce)
-        velX, velY = vec.add(velX, velY, fx* dt, fy*dt)
-    end
-    if profile.constantDamp then
-        velX, velY = vec.scale(velX, velY, 1.0-(profile.constantDamp*dt))
-    end
-    if profile.dampNearTarget then
-        local locality = interp.clamp(interp.remap(absDist, 0.0, profile.dampNearTarget[1], 1.0, 0.0), 0.0, 1.0)
-        locality = interp.lerp(0.0, 1.0, locality, interp.quart.into)
-        local damp = 1.0-((profile.dampNearTarget[2]*dt) * locality)
-        velX, velY = vec.scale(velX, velY, damp)
-    end
-
-
-    c["lastAccess"] = self.frame
-    c["velocity"] = {velX, velY}
-    c["previousTarget"] = {targetX, targetY}
-
-    if profile.flatApproach then
-        -- local fax, fay = vec.normalize(dirX, dirY)
-        -- fax, fay = vec.scale(fax, fay, profile.flatApproach)
-        return currentX+velX, currentY+velY
-    else
-        return currentX+velX, currentY+velY
-    end
-
-    -- if profile.flatApproach then
-    --     local ax, ay = vec.scale(dirX, dirY, profile.flatApproach)
-    --     local approach = profile.flatApproach * dt
-    --     if interp.within(current+vel, towards, approach*1.3) then
-    --         return towards
-    --     end
-    --     return current+vel+(approach*dir)
-    -- else
-    
-    -- end
-    -- return currentX, currentY
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return ctx.value[1], ctx.value[2]
 end
 
-function Juice:clearCache(key)
-    self.cache[key] = nil
+function Juice:addBit(id, bit)
+    if bit.update == nil or bit.draw == nil or bit.alive == nil then
+        error("Dep.Juice: Bit "..tostring(bit).." failed to supply update, draw, and alive functions.")
+    end
+    self.bits[id] = bit
 end
 
 function Juice:update()
+    for k,v in pairs(self.bits) do
+        if v:alive() == false then
+            self.bits[k] = nil
+        end
+    end
     self.frame = self.frame + 1
 end
 
+function Juice:flushUpdates()
+    for k,v in pairs(self.bits) do
+        v:update()
+    end
+end
+function Juice:flushDraws(tag)
+    for k,v in pairs(self.bits) do
+        v:draw(tag)
+    end
+end
 return Juice

@@ -206,7 +206,7 @@ end
 
 --- Returns an iterator that retrieves entities of the specified type.
 ---@param type string
----@return function iterator iterator that spits out entities
+---@return fun():ldtk.Entity|nil iterator iterator that spits out entities
 function Layer:entitiesOfType(type)
     local i = 0
     return function()
@@ -226,7 +226,7 @@ end
 --- and writes it all into a sprite batch that is returned. You can just
 --- `love.graphics.draw(theSpriteBatch)` and it works. the tiles are 
 --- placed in the batch at tileposition+layerposition
----@return love.SpriteBatch?
+---@return love.SpriteBatch|nil
 function Layer:makeSpriteBatch()
     if self.tilesetUid == nil then return nil end
 
@@ -264,6 +264,7 @@ end
 ---@field worldSize number[] the level's size on the world chart (this is also the real size of the level)
 ---@field worldDepth integer the level's depth in the world chart
 ---@field layers ldtk.Layer[] the layers inside this level
+---@field fields table<string,any>
 local Level = Object:extend()
 
 function Level:new(object, parent)
@@ -275,14 +276,20 @@ function Level:new(object, parent)
     self.worldSize = {object["pxWid"], object["pxHei"]}
     self.worldDepth = object["worldDepth"]
     self.layers = {}
+    self.fields = {}
     local layerCount = #object["layerInstances"]
     for i=1,layerCount do
         self.layers[#self.layers+1] = Layer(object["layerInstances"][i], self)
     end
+    for i=1,#object["fieldInstances"] do
+        self.fields[object["fieldInstances"][i]["__identifier"]] = object["fieldInstances"][i]["__value"]
+    end
 end
 
-
-function Level:getValue(valueName)
+---@param fieldName string
+---@return nil|string|number|integer|table|boolean
+function Level:getField(fieldName)
+    return self.fields[fieldName]
 end
 
 ---@param name string
@@ -295,16 +302,23 @@ function Level:getLayer(name)
 end
 
 ---@class ldtk.Project
+---@field iid string
+---@field jsonVersion string
 ---@field folder string the project file's folder, for resolving tilesets.
 ---@field raw table the raw decoded ldtk project json in lua table format
 ---@field levels ldtk.Level[]
+---@field layout "Free"|"GridVania"|"LinearHorizontal"|"LinearVertical" the worlds layout
+---@field worldGridSize number[]|nil the size of the entire world. Only in gridvanias.
 ---@field tilesets ldtk.Tileset[]
+---@overload fun(filepath: string):ldtk.Project
 local Project = Object:extend()
 
----@param fileData string the contents of the ldtk file to parse
----@param filePath? string
-function Project:new(fileData, filePath)
-    self.raw = json.decode(fileData)
+---@param filePath string
+function Project:new(filePath)
+    self.raw = json.decode(love.filesystem.read(filePath))
+    if self.raw.worldLayout == nil then
+        error("LDtk: external/multiple worlds are not supported yet.")
+    end
     self.levels = {}
     if filePath then
         self.folder = filePath:match("(.*/)")
@@ -313,6 +327,16 @@ function Project:new(fileData, filePath)
 
     for i=1,levelCount do
         self.levels[#self.levels+1] = Level(self.raw["levels"][i], self)
+    end
+
+    self.iid = self.raw.iid
+    self.jsonVersion = self.raw.jsonVersion
+    self.layout = self.raw.worldLayout
+    if self.layout == "GridVania" then
+        self.worldGridSize = {
+            self.raw.worldGridWidth,
+            self.raw.worldGridHeight
+        }
     end
 
     if filePath then
@@ -336,7 +360,7 @@ function Project:getTileset(name)
 end
 
 ---@param name string the identifier of the level.
----@return ldtk.Level?
+---@return ldtk.Level|nil
 function Project:getLevel(name)
     for k, v in pairs(self.levels) do
         if v.identifier == name then return v end
@@ -351,14 +375,5 @@ ldtk.Entity = Entity
 ldtk.FieldInstance = FieldInstance
 ldtk.Tileset = Tileset
 ldtk.Tile = Tile
-
----@param fileData string read the entire file and pass it here.
----@param filePath string the path of the file itself. pass nil if mem loading, disables tilesets and separate levels
----@return ldtk.Project
-ldtk.load = function(fileData, filePath)
-    ---@type ldtk.Project
-    LDtkProject = Project(fileData, filePath)
-    return LDtkProject
-end
 
 return ldtk

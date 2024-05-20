@@ -30,14 +30,19 @@ To use:
 local Resource = require "dep.resource"
 function love.load()
     ---@type Resource
-    RS = Resource()
+    RS = Resource("GameName")
     -- Automatically loads
     SETTINGS = RS:load("user/settings.json", {name = "Bob", points = 10.0}, false)
 
     -- If user/settings.json didnt exist:
-    print(SETTINGS["name"]) -- Bob
+    print(SETTINGS.name) -- Bob
     -- If it did, and was changed to Peter:
-    print(SETTINGS["name"]) -- Peter
+    print(SETTINGS.name) -- Peter
+
+    -- also includes some qol things such as nine slice and image sheet.
+    Assets = {
+        menuBackground = 
+    }
 end
 
 function love.quit()
