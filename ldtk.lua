@@ -44,11 +44,13 @@ end
 ---@field pivot number[] normalized floats, 0.0 = left, 0.5 = center, 1 = right side
 ---@field size number[] the size of the entity itself.
 ---@field position number[] pixel position in the level
----@field worldPosition number[] pixel position in the world
+---@field worldPosition number[]|nil pixel position in the world
 ---@field fields ldtk.FieldInstance[] if the object type had field values, they're in here.
+---@overload fun(obj: table, parent: ldtk.Layer): ldtk.Entity
 local Entity = Object:extend()
 
 ---@param object table the object from the decoded ldtk project
+---@param parent ldtk.Layer
 function Entity:new(object, parent)
     self.parent = parent
     self.iid = object["iid"]
@@ -57,7 +59,9 @@ function Entity:new(object, parent)
     self.pivot = object["__pivot"]
     self.size = {object["width"], object["height"]}
     self.position = object["px"]
-    self.worldPosition = {object["__worldX"], object["__worldY"]}
+    if parent.parent.parent.layout == "GridVania" or parent.parent.parent.layout == "Free" then
+        self.worldPosition = {object["__worldX"], object["__worldY"]}
+    end
     self.fields = {}
     local fieldCount = #object["fieldInstances"]
     for i=1,fieldCount do
@@ -69,6 +73,7 @@ end
 ---@field position number[] pixel position in layer space
 ---@field src number[] src position in pixels
 ---@field alpha number transparency, 0.0 = invisibile, 1.0 = fully visible
+---@overload fun(object: table): ldtk.Tile
 local Tile = Object:extend()
 
 function Tile:new(object)
