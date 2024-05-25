@@ -9,6 +9,7 @@
 
 
 ---@class Object
+---@field super any The parent class
 local Object = {}
 Object.__index = Object
 

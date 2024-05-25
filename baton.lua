@@ -355,13 +355,13 @@ function Player:released(name)
 	end
 end
 
---[[
-	gets the currently active device (either "kbm", "joy", or "none").
-	this is useful for displaying instructional text. you may have
-	a menu that says "press ENTER to confirm" or "press A to confirm"
-	depending on whether the player is using their keyboard or gamepad.
-	this function allows you to detect which they used most recently.
-]]
+
+--- gets the currently active device (either "kbm", "joy", or "none").
+--- this is useful for displaying instructional text. you may have
+--- a menu that says "press ENTER to confirm" or "press A to confirm"
+--- depending on whether the player is using their keyboard or gamepad.
+--- this function allows you to detect which they used most recently.
+---@return "kbm"|"joy"|"none"
 function Player:getActiveDevice()
 	return self._activeDevice
 end

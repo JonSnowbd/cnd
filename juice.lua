@@ -221,6 +221,7 @@ end
 
 ---@class Juice.PhysicsProfile : Object
 ---@field mechanisms Juice.PhysicsMechanism[]
+---@overload fun(): Juice.PhysicsProfile
 local PhysicsProfile = Object:extend()
 
 function PhysicsProfile:new()
@@ -252,6 +253,7 @@ function Juice:new()
     self.frame = 0
     self.timeScale = 1.0
     self.bits = {}
+    self.bits.base = {}
 end
 
 --- Loose, slow, overshoots often.
@@ -353,17 +355,25 @@ function Juice:vector(current, towards, id, profile)
     return ctx.value[1], ctx.value[2]
 end
 
-function Juice:addBit(id, bit)
+---@param id string
+---@param bit any
+---@param world string|nil
+function Juice:addBit(id, bit, world)
     if bit.update == nil or bit.draw == nil or bit.alive == nil then
         error("Dep.Juice: Bit "..tostring(bit).." failed to supply update, draw, and alive functions.")
     end
-    self.bits[id] = bit
+    if self.bits[world or "base"] == nil then
+        self.bits[world or "base"] = {}
+    end
+    self.bits[world or "base"][id] = bit
 end
 
 function Juice:update()
     for k,v in pairs(self.bits) do
-        if v:alive() == false then
-            self.bits[k] = nil
+        for k2, v2 in pairs(v) do
+            if v2:alive() == false then
+                v[k2] = nil
+            end
         end
     end
     self.frame = self.frame + 1
@@ -371,11 +381,16 @@ end
 
 function Juice:flushUpdates()
     for k,v in pairs(self.bits) do
-        v:update()
+        for k2, v2 in pairs(v) do
+            v2:update()
+        end
     end
 end
-function Juice:flushDraws(tag)
-    for k,v in pairs(self.bits) do
+
+---@param tag any
+---@param world string|nil bits can exist in different 'worlds'. useful if you have multiple running scenes that have their own bits.
+function Juice:flushDraws(tag, world)
+    for k,v in pairs(self.bits[world or "base"]) do
         v:draw(tag)
     end
 end

@@ -10,7 +10,7 @@ Covers abstractions for:
 5) Translation support with $TAG support in `dep.translate` (inserts globals, simply require it without assignment)
 6) Complete handling of efficient low-res virtual viewports in `dep.playground`
 7) A module dedicated entirely to juice
-8) Pathfinding via [Jumper](https://github.com/Yonaba/Jumper)
+8) Simple pathfinding
 
 and a focus on:
 

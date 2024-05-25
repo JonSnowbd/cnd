@@ -5,6 +5,7 @@ local json = require "dep.json"
 ---@field source love.Image
 ---@field quads love.Quad[][]
 ---@field tileSize number[]
+---@overload fun(image: love.Texture, tileW: number, tileH: number): Resource.ImageSheet
 local ImageSheet = Object:extend()
 
 function ImageSheet:new(image, tileWidth, tileHeight)
@@ -36,6 +37,35 @@ end
 function ImageSheet:type() return "ImageSheet" end
 
 
+---@class Resource.Sprite : Object
+---@field source love.Image
+---@field quad love.Quad
+---@overload fun(image: love.Texture, srcX: number, srcY: number, srcW: number, srcH: number): Resource.Sprite
+local Sprite = Object:extend()
+
+function Sprite:type() return "Sprite" end
+
+---@param image love.Image
+---@param srcX number
+---@param srcY number
+---@param srcW number
+---@param srcH number
+function Sprite:new(image, srcX, srcY, srcW, srcH)
+    self.source = image
+    self.quad = love.graphics.newQuad(srcX, srcY, srcW, srcH, image:getWidth(), image:getHeight())
+end
+
+---@param x number
+---@param y number
+---@param r number|nil
+---@param sx number|nil
+---@param sy number|nil
+---@param ox number|nil
+---@param oy number|nil
+function Sprite:draw(x,y,r,sx,sy,ox,oy)
+    love.graphics.draw(self.source, self.quad, x, y, r or 0.0, sx or 1.0, sy or 1.0, ox or 0.0, oy or 0.0)
+end
+
 ---@class Resource.NinePatch : Object
 ---@field source love.Image
 ---@field quads love.Quad[]
@@ -45,6 +75,7 @@ function ImageSheet:type() return "ImageSheet" end
 ---@field top number
 ---@field right number
 ---@field bottom number
+---@overload fun(image: love.Texture, srcX: number, srcY: number, srcW: number, srcH: number, left: number, top: number, right:number, bottom:number): Resource.NinePatch
 local NinePatch = Object:extend()
 
 function NinePatch:type() return "NinePatch" end
@@ -133,6 +164,7 @@ local Resource = Object:extend()
 
 Resource.ImageSheet = ImageSheet
 Resource.NinePatch = NinePatch
+Resource.Sprite = Sprite
 
 function Resource:new(identity)
     love.filesystem.setIdentity(identity)
@@ -147,7 +179,7 @@ end
 ---@param userPath string name of the file in the save directory, eg "settings/player1"
 ---@param data table pass in the default settings of the resource, this wont be returned if the file exists.
 ---@param tight boolean if true, compresses.
-function Resource:sync(userPath, data, tight)
+function Resource:save(userPath, data, tight)
     local dir = dirOf(userPath)
     if dir ~= nil and dir ~= "" then
         love.filesystem.createDirectory(dir)
@@ -159,7 +191,7 @@ function Resource:sync(userPath, data, tight)
         local data = json.encode(data)
         love.filesystem.write(userPath, data)
     end
-    print("DEP: Creating '"..userPath.."'")
+    print("DEP: Saving '"..userPath.."'")
 end
 --- Looks in save directory for the path, and loads it to return as a table,
 --- or returns defaultData after persisting the default data to the userPath if it didnt exist.
