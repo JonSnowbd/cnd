@@ -40,6 +40,7 @@ function ImageSheet:type() return "ImageSheet" end
 ---@class Resource.Sprite : Object
 ---@field source love.Image
 ---@field quad love.Quad
+---@field sourceSize number[]
 ---@overload fun(image: love.Texture, srcX: number, srcY: number, srcW: number, srcH: number): Resource.Sprite
 local Sprite = Object:extend()
 
@@ -52,6 +53,7 @@ function Sprite:type() return "Sprite" end
 ---@param srcH number
 function Sprite:new(image, srcX, srcY, srcW, srcH)
     self.source = image
+    self.sourceSize = {srcW, srcH}
     self.quad = love.graphics.newQuad(srcX, srcY, srcW, srcH, image:getWidth(), image:getHeight())
 end
 

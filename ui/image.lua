@@ -32,7 +32,7 @@ Image.layout=function(face, ovr)
 
     if tintH ~= nil and face:widgetHovered(p, p, mw+(p*2), mh+(p*2)) then
         color = tintH
-        if tintA ~= nil and face:widgetConfirmDown() then
+        if tintA ~= nil and face:widgetConfirmDown() and face.age >= 2 then
             color = tintA
         end
     end

@@ -26,7 +26,7 @@ Label.layout = function(face, ovr)
     end
     if (ovr.colorHovered or Label.colorHover) and face:widgetHovered(0, 0, lw, lh) then
         color = ovr.colorHovered or Label.colorHover
-        if (ovr.colorActive or Label.colorActive) and face:widgetConfirmDown() then
+        if (ovr.colorActive or Label.colorActive) and face:widgetConfirmDown() and face.age >= 2 then
             color = ovr.colorActive or Label.colorActive
         end
     end

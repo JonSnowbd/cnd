@@ -142,6 +142,7 @@ function Interface:start(id, x, y, xO, yO, w, h)
         ---@type Interface.Layout
         local newLayout = Interface.Layout(id, self)
         self.layoutStack[id] = newLayout
+        self.layoutStack[id].age = 0
     end
     self.layoutStack[id].background = nil
     self.layoutStack[id].requestedOn = self.currentFrame
@@ -160,6 +161,7 @@ function Interface:update()
         end
         v:finalize(true)
         v:finalize(false)
+        v.age = v.age + 1
         ::continue::
     end
     self.currentFrame = self.currentFrame + 1

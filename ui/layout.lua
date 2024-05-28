@@ -18,6 +18,7 @@ local vec    = require "dep.vec"
 ---@field layingOut boolean
 ---@field stuckWidget string|nil
 ---@field debug boolean
+---@field age integer how many frames old this action is.
 local Layout = Object:extend()
 
 Layout.DrawCommand = require "dep.ui.drawcommand"
@@ -39,6 +40,7 @@ function Layout:new(id, parent)
     self.commands = {}
     self.windowWidthBasis = 0.0
     self.layingOut = false
+    self.age = 0
 end
 
 --- Every widget has a state persisted for its duration. Wiped when idle for long enough.

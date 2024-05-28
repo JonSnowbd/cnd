@@ -39,7 +39,7 @@ Slider.layout = function(ui, ovr)
     local col = ovr.color or Slider.color
     if ui:widgetHovered(0,0,w,h) then
         col = ovr.colorHover or Slider.colorHover
-        if ui:widgetConfirmDown() then
+        if ui:widgetConfirmDown() and ui.age >= 2 then
             col = ovr.colorActive or Slider.colorActive
             ui:widgetStick()
         end

@@ -227,6 +227,83 @@ function Layer:entitiesOfType(type)
     end
 end
 
+---comment
+---@param self ldtk.Layer
+---@param startX integer
+---@param endX integer
+---@param startY integer
+---@param checked boolean[]
+---@param identity integer
+---@return integer[]
+local function findBoundsRect(self, startX, endX, startY, checked, identity)
+    local index = -1
+
+    for y=startY+1,self.gridHeight do
+        for x=startX,endX-1 do
+            index = (y-1) * self.gridWidth + x
+            local value = self.intgrid[y][x]
+
+            if value ~= identity or checked[index] == true then
+                for _x=startX,x do
+                    index = (y-1) * self.gridWidth + _x
+                    checked[index] = false
+                end
+
+                return {startX, startY, endX - startX, y-startY}
+            end
+
+            checked[index] = true
+        end
+    end
+    return {startX,startY,endX-startX, self.gridHeight-startY}
+end
+
+--- If the layer is an intgrid, this merges neighbouring tiles into
+--- large rectangles. Useful for collision and 'rooms' ala rimworld.
+---@param identity integer the boxes will be made of tiles of this value
+---@param callback fun(rect: integer[], gridsize: number) rects with index positions and sizes, x, y, w, h. 
+function Layer:greedyBoxes(identity, callback)
+    if self.layerType ~= "IntGrid" then error("Cannot make islands from non-intgrids for layer "..self.identifier) end
+
+    -- translated from https://github.com/prime31/Nez/blob/master/Nez.Portable/Assets/Tiled/Runtime/Layer.Runtime.cs#L40
+    -- and adapted to differentiate per tile rather than any tile.
+    -- Highly recommend nez, awesome framework
+
+    ---@type boolean[]
+    local checked = {}
+    ---@type integer[][]
+    local rects = {}
+    local startCol = -1
+
+    for y=1,#self.intgrid do
+        for x=1, #self.intgrid[y] do
+            local ind = (y-1) * self.gridWidth + x
+            local value = self.intgrid[y][x]
+            if value == identity and (checked[ind] == nil or checked[ind] == false) then
+                if startCol < 1 then
+                    startCol = x
+                end
+                checked[ind] = true
+            elseif value ~= identity or checked[ind] == true then
+                if startCol >= 1 then
+                    rects[#rects+1] = findBoundsRect(self, startCol, x, y, checked, identity)
+                    startCol = -1
+                end
+            end
+        end
+
+        if startCol >= 1 then
+            rects[#rects+1] = findBoundsRect(self, startCol, self.gridWidth, y, checked, identity)
+            startCol = -1
+        end
+    end
+
+    for i=1,#rects do
+        -- print(rects[i][1]..'x'..rects[i][2]..'x'..rects[i][3]..'x'..rects[i][4])
+        callback(rects[i], self.gridSize)
+    end
+end
+
 --- Takes all the tiles in the layer(if it is an autolayer or tile layer)
 --- and writes it all into a sprite batch that is returned. You can just
 --- `love.graphics.draw(theSpriteBatch)` and it works. the tiles are 

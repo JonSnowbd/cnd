@@ -42,7 +42,7 @@ Button.layout = function(ui, ovr)
             col = ovr.colorHover or Button.colorHover
         end
     end
-    if ui:widgetClicked(0,0,fw+(p*2),fh+(p*2)) then
+    if ui:widgetClicked(0,0,fw+(p*2),fh+(p*2)) and ui.age >= 2 then
         local fn = ovr.pressed or Button.pressed
         fn()
     end
