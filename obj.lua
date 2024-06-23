@@ -8,17 +8,17 @@
 --
 
 
----@class Object
+---@class cnd.obj
 ---@field super any The parent class
-local Object = {}
-Object.__index = Object
+local obj = {}
+obj.__index = obj
 
 
-function Object:new()
+function obj:new()
 end
 
 
-function Object:extend()
+function obj:extend()
   local cls = {}
   for k, v in pairs(self) do
     if k:find("__") == 1 then
@@ -32,7 +32,7 @@ function Object:extend()
 end
 
 
-function Object:implement(...)
+function obj:implement(...)
   for _, cls in pairs({...}) do
     for k, v in pairs(cls) do
       if self[k] == nil and type(v) == "function" then
@@ -43,7 +43,7 @@ function Object:implement(...)
 end
 
 
-function Object:is(T)
+function obj:is(T)
   local mt = getmetatable(self)
   while mt do
     if mt == T then
@@ -55,12 +55,12 @@ function Object:is(T)
 end
 
 
-function Object:__tostring()
-  return "Object"
+function obj:__tostring()
+  return "obj"
 end
 
 
-function Object:__call(...)
+function obj:__call(...)
   local obj = setmetatable({}, self)
 ---@diagnostic disable-next-line: redundant-parameter
   obj:new(...)
@@ -68,4 +68,4 @@ function Object:__call(...)
 end
 
 
-return Object
+return obj

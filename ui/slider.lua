@@ -1,6 +1,5 @@
-local vec = require "dep.vec"
-local interp = require "dep.interp"
----@class Interface.Slider
+local mth = require "cnd.mth"
+---@class cnd.ui.slider
 local Slider = {}
 
 
@@ -29,15 +28,15 @@ Slider.height = 6.0
 Slider.value = 0.5
 Slider.valueChanged=function(v) end
 
----comment
----@param ui Interface.Layout
+---@param ui cnd.ui.layout
 ---@param ovr table
 Slider.layout = function(ui, ovr)
     local w = ovr.width or Slider.width
     local h = ovr.height or Slider.height
     local bgCol = ovr.backgroundColor or Slider.backgroundColor
     local col = ovr.color or Slider.color
-    if ui:widgetHovered(0,0,w,h) then
+    local splat = mth.rec(0,0,w,h)
+    if ui:widgetHovered(splat) then
         col = ovr.colorHover or Slider.colorHover
         if ui:widgetConfirmDown() and ui.age >= 2 then
             col = ovr.colorActive or Slider.colorActive
@@ -48,7 +47,7 @@ Slider.layout = function(ui, ovr)
     if ui:widgetStuck() then
         col = ovr.colorActive or Slider.colorActive
         local x, _ = ui:widgetCursorLocation()
-        local v = interp.clamp(x/w, 0.0, 1.0)
+        local v = mth.clamp(x/w, 0.0, 1.0)
         local fn = ovr.valueChanged or Slider.valueChanged
         fn(v)
         if ui:widgetConfirmDown() == false then
@@ -56,8 +55,9 @@ Slider.layout = function(ui, ovr)
         end
     end
 
-    ui:widgetDraw(0,0,w,h, (ovr.background or Slider.background), (ovr.backgroundData or Slider.backgroundData), bgCol)
-    ui:widgetDraw(0,0,w*(ovr.value or Slider.value),h, (ovr.foreground or Slider.foreground), (ovr.foregroundData or Slider.foregroundData), col)
+    ui:widgetDraw(splat, (ovr.background or Slider.background), (ovr.backgroundData or Slider.backgroundData), bgCol)
+    splat.w = splat.w * (ovr.value or Slider.value)
+    ui:widgetDraw(splat, (ovr.foreground or Slider.foreground), (ovr.foregroundData or Slider.foregroundData), col)
 end
 
 return Slider

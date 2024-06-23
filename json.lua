@@ -372,6 +372,8 @@ parse = function(str, idx)
 end
 
 
+---@param str string
+---@return table
 function json.decode(str)
   if type(str) ~= "string" then
     error("expected argument of type string, got " .. type(str))

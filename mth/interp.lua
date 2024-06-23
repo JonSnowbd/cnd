@@ -7,29 +7,6 @@ end
 
 local interp = {}
 
---- Clamps a number between min and max
----@param val number
----@param min number
----@param max number
----@return number
-interp.clamp = function(val, min, max)
-    if val < min then
-        return min
-    elseif val > max then
-        return max
-    end
-
-    return val
-end
-
----snaps a number to the nearest increment of `to`
----@param n number current value
----@param to number
----@return number
-interp.snap = function(n, to)
-    return math.floor(n/to + 0.5) * to
-end
-
 --- takes a value, and the expected range it will be given in, and then
 --- outputs the output range within the ratio that the value was inside the value range...
 --- its complicated but its just lerp on steroids.

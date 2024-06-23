@@ -1,4 +1,5 @@
----@class Interface.Image
+local mth = require "cnd.mth"
+---@class cnd.ui.image
 ---@field padding number
 ---@field tint number[] The image color
 ---@field tintHovered number[]|nil The image color, if hovered.
@@ -18,7 +19,7 @@ Image.image = true
 Image.data = nil
 Image.pressed = function() end
 
----@param face Interface.Layout
+---@param face cnd.ui.layout
 ---@param ovr table
 Image.layout=function(face, ovr)
     local mw = ovr.width or Image.width
@@ -30,14 +31,16 @@ Image.layout=function(face, ovr)
     local tintH = ovr.tintHovered or Image.tintHovered
     local tintA = ovr.tintActive or Image.tintActive
 
-    if tintH ~= nil and face:widgetHovered(p, p, mw+(p*2), mh+(p*2)) then
+    local splat = mth.rec(p, p, mw+(p*2), mh+(p*2))
+
+    if tintH ~= nil and face:widgetHovered(splat) then
         color = tintH
         if tintA ~= nil and face:widgetConfirmDown() and face.age >= 2 then
             color = tintA
         end
     end
 
-    face:widgetDraw(p, p, mw+(p*2), mh+(p*2), ovr.image or Image.image, ovr.data or Image.data, color)
+    face:widgetDraw(splat, ovr.image or Image.image, ovr.data or Image.data, color)
 end
 
 return Image

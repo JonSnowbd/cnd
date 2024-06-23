@@ -120,6 +120,7 @@ end
 	however you want.
 ]]
 
+---@class BatonInstance
 local Player = {}
 Player.__index = Player
 
@@ -290,14 +291,17 @@ end
 
 -- public API --
 
--- checks for changes in inputs
+--- Checks for changes in inputs, run this before your logic.
 function Player:update()
 	self:_setActiveDevice()
 	self:_updateControls()
 	self:_updatePairs()
 end
 
--- gets the value of a control or axis pair without deadzone applied
+--- Gets the value of a control or axis pair without deadzone applied
+---@param name string
+---@return number x the input value, or the x value if querying a pair
+---@return number|nil y if you are querying a pair the second vector component is returned.
 function Player:getRaw(name)
 	if self._pairs[name] then
 		return self._pairs[name].rawX, self._pairs[name].rawY
@@ -309,9 +313,9 @@ function Player:getRaw(name)
 end
 
 ---gets the value of a control or axis pair with deadzone applied
----@param name string input control name
----@return number|nil
----@return number|nil
+---@param name string
+---@return number x the input value, or the x value if querying a pair
+---@return number|nil y if you are querying a pair the second vector component is returned.
 function Player:get(name)
 	if self._pairs[name] then
 		return self._pairs[name].x, self._pairs[name].y
@@ -322,7 +326,9 @@ function Player:get(name)
 	end
 end
 
--- gets whether a control or axis pair is "held down"
+--- Gets whether a control or axis pair is "held down" 
+---@param name string
+---@return boolean
 function Player:down(name)
 	if self._pairs[name] then
 		return self._pairs[name].down
@@ -333,7 +339,9 @@ function Player:down(name)
 	end
 end
 
--- gets whether a control or axis pair was pressed this frame
+--- Gets whether a control or axis pair was pressed this frame
+---@param name string
+---@return boolean
 function Player:pressed(name)
 	if self._pairs[name] then
 		return self._pairs[name].pressed
@@ -344,7 +352,9 @@ function Player:pressed(name)
 	end
 end
 
--- gets whether a control or axis pair was released this frame
+--- Gets whether a control or axis pair was released this frame
+---@param name string
+---@return boolean
 function Player:released(name)
 	if self._pairs[name] then
 		return self._pairs[name].released
@@ -368,7 +378,16 @@ end
 
 -- main functions --
 
--- creates a new player with the user-provided config table
+---@class BatonConfig
+---@field controls table<string,string[]> List of actions, and their inputs. eg `moveUp = {"key:w", "button:dpup"}`
+---@field pairs table<string,string[]>|nil Combine multiple inputs into one identity, eg `move = {"moveLeft", "moveRight", "moveUp", "moveDown"}`
+---@field joystick love.Joystick|nil
+---@field deadzone number|nil
+local cfgClass
+
+--- creates a new player with the user-provided config table
+---@param config BatonConfig
+---@return BatonInstance
 function baton.new(config)
 	local player = setmetatable({}, Player)
 	player:_init(config)
