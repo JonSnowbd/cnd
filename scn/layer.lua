@@ -78,7 +78,6 @@ function layer:sendPhase(phase, data)
         if ent.enabled and ent.constructed then
             local val = ent.subscriptions[phase](ent, data)
             if val ~= nil and ret == nil then
-                print("RET")
                 ret = val
             end
         end

@@ -1,4 +1,5 @@
 local obj = require "cnd.obj"
+local arr = require "cnd.arr"
 local mth = require "cnd.mth"
 local interp = require "cnd.mth.interp"
 
@@ -11,6 +12,8 @@ local interp = require "cnd.mth.interp"
 ---@overload fun(psFileData: string, vsFileData: string|nil) : cnd.scr.shader
 local shader = obj:extend()
 
+---@param psFileData string the file contents of a shader
+---@param vsFileData string the file contents of a shader
 function shader:new(psFileData,vsFileData)
     if vsFileData ~= nil then
         self.raw = love.graphics.newShader(psFileData, vsFileData)
@@ -36,11 +39,12 @@ end
 ---@field transitionShader string
 ---@field transitionEase function?
 ---@field finalOutputTransform love.Transform the transform used to draw the game canvas to the screen.
----@field debugFont love.Font
+---@field debugFont love.Font a default font used in debug
 ---@field debugFontO love.Font outlined debug font
 ---@field barColor number[] When the window is sized incorrectly, this is the color of the blackbars
 ---@field camera cnd.scr.camera
 ---@field previousMousePosition number[]
+---@field debugTable table internal debug data, no need to manipulate this.
 ---@overload fun(width: integer, height: integer): cnd.scr
 local scr = obj:extend()
 
@@ -357,6 +361,35 @@ function scr:getWorldMouseDelta()
     return mth.v2((ms.x - self.previousMousePosition[1]) / self.camera.zoom[1], (ms.y - self.previousMousePosition[2]) / self.camera.zoom[2])
 end
 
+
+--- Like print, but gets sent to the screen.
+---@param message string
+---@param time number|nil how long it will be on screen
+function scr:dlog(message, time)
+    ---@type cnd.arr
+    local log = self.debugTable.log
+    log:append({
+        message = message,
+        time = time or 0.0,
+    })
+end
+--- Given a name and a value, this is always shown as long as its being 
+--- called every frame. Great for 'watching' a value in an entity.
+---@param name string the name of the value being watched
+---@param value any any value type to be `tostring`ed
+function scr:dwatch(name, value)
+        if self.debugTable.watch[name] ~= nil then
+            self.debugTable.watch[name].value = value
+            self.debugTable.watch[name].requested = true
+        else
+            self.debugTable.watch[name] = {
+                name = name,
+                value = value,
+                requested = true
+            }
+        end
+end
+
 --- To be called at AFTER your logic in update loop
 function scr:update()
     local dt = love.timer.getDelta()
@@ -369,6 +402,8 @@ function scr:update()
 end
 
 --- To be called AFTER your draw calls in the draw loop
+--- Does screen transform math, and outputs the final canvas
+--- to the screen, and handles debug stuff.
 ---@param finalShader? string
 ---@param finalShaderData? table
 function scr:draw(finalShader, finalShaderData)
@@ -397,7 +432,62 @@ function scr:draw(finalShader, finalShaderData)
         love.graphics.draw(self.snapshotCanvas, self.finalOutputTransform)
         self:unbindShader()
     end
+
+    self:dumpWatchTable()
+    self:dumpLog()
 end
+
+---@protected
+function scr:dumpLog()
+    local right = love.graphics.getWidth()
+    local dt = love.timer.getDelta()
+    ---@type cnd.arr
+    local array = self.debugTable.log
+    local cleanse = false
+    local stamp = 3.0
+    love.graphics.setFont(self.debugFontO)
+    for item in array:iter() do
+        local measure = self.debugFontO:getWidth(item.message)
+        love.graphics.print(item.message,right-measure-3.0, stamp)
+        item.time = item.time - dt
+        if item.time <= 0.0 then
+            cleanse = true
+        end
+        stamp = stamp + self.debugFontO:getHeight() + 3.0
+    end
+
+    if cleanse then
+        local filter = function(v)
+            return (v.time or -1.0) > 0.0
+        end
+        array:filter(filter)
+    end
+end
+
+---@protected
+function scr:dumpWatchTable()
+    love.graphics.setFont(self.debugFontO)
+    local tab = {}
+    for k, v in pairs(self.debugTable.watch) do
+        tab[#tab+1] = k
+    end
+
+    -- Quick and dirty ordered dump of all watched items.
+    if #tab > 0 then
+        local stamp = 3.0
+        table.sort(tab)
+        for i, v in ipairs(tab) do
+            if self.debugTable.watch[v].requested then
+                love.graphics.print(self.debugTable.watch[v].name..": "..tostring(self.debugTable.watch[v].value), 3, stamp)
+                stamp = stamp + self.debugFontO:getHeight() + 3
+                self.debugTable.watch[v].requested = false
+            else
+                self.debugTable.watch[v] = nil
+            end
+        end
+    end 
+end
+
 function scr:new(width, height)
     self.size = {width, height}
     self.gameCanvas = love.graphics.newCanvas(width, height)
@@ -418,6 +508,11 @@ function scr:new(width, height)
     self.finalOutputTransform = love.math.newTransform()
     self.barColor = {0.0, 0.0, 0.0, 1.0}
     self.camera = camera(width, height)
+
+    self.debugTable = {
+        log = arr(),
+        watch = {},
+    }
 end
 
 return scr

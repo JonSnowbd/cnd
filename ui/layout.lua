@@ -2,6 +2,7 @@ local obj = require "cnd.obj"
 local mth = require "cnd.mth"
 
 ---@class cnd.ui.layout
+---@field background any[] table array of either just the [bg], or [bg,data]
 ---@field padding number
 ---@field spacing number
 ---@field id string
@@ -23,10 +24,13 @@ local layout = obj:extend()
 
 layout.cmd = require "cnd.ui.drawcommand"
 
+---@param id string
+---@param parent cnd.ui
 function layout:new(id, parent)
     self.debug = false
-    self.padding = 2
-    self.spacing = 1
+    self.background = {parent.defaultBackground, parent.defaultBackgroundData}
+    self.padding = parent.defaultPadding or 2.0
+    self.spacing = parent.defaultSpacing or 2.0
     self.id = id
     self.parent = parent
     self.position = mth.v2(0,0)

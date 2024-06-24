@@ -21,6 +21,15 @@ local ui = objClass:extend()
 
 ui.layout = require "cnd.ui.layout"
 
+---@type any|nil
+ui.defaultBackground = nil
+---@type any|nil
+ui.defaultBackgroundData = nil
+---@type number|nil
+ui.defaultPadding = 3.0
+---@type number|nil
+ui.defaultSpacing = 3.0
+
 function ui:new()
     self.horizontal = 0
     self.vertical = 0

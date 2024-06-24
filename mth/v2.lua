@@ -52,6 +52,10 @@ function v2:normalized()
     return self * (1.0/len)
 end
 
+function v2:__tostring()
+    return ("(%.2fx%.2f)"):format(self.x, self.y)
+end
+
 --- Returns the inbetween of two vectors, (mix*100)% along the line between them.
 --- eg 0.5 = the middle point.
 ---@param other cnd.mth.v2

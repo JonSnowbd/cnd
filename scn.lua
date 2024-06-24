@@ -81,13 +81,18 @@ function scn:crash(ent, layer, message)
     error(message)
 end
 
+--- A scene's construction method. It is only really here for parity with entities. 
+--- Typically you'd rather override `scn:new` to have the option of passing in parameters.
 function scn:onConstruct()
 end
+--- A scene can have its own update logic, happens after every layer has been processed
 function scn:onUpdate()
 end
+--- A scene can have its own on draw, happens after every layer has been processed
 function scn:onDraw()
 end
 
+--- Classic constructor. Do not call manually.
 function scn:new()
     self.objects = {}
     self.layers = {}
@@ -122,17 +127,24 @@ function scn:new()
     self:onConstruct()
 end
 
+--- Not needed if you assigned `cnd.scr.defaultScreen`
 ---@param scr cnd.scr
 function scn:addScreen(scr)
     self.scr = scr
 end
 
+---@return integer id a unique id
 function scn:getID()
     local id = self.runningIdentity
     self.runningIdentity = self.runningIdentity + 1
     return id
 end
 
+--- Internal method. If you need to send an event, prefer `triggerEvent`
+---@protected
+---@param layer cnd.scn.layer The target layer
+---@param phase any 
+---@param data any
 function scn:triggerPhase(layer, phase, data)
     if phase == scn.phase.fixedUpdate then
         local target = 1.0/self.fixedUpdateRate
@@ -146,6 +158,7 @@ function scn:triggerPhase(layer, phase, data)
     end
 end
 
+--- Sends an event to every layer, and every entity 
 ---@param event any The event marker
 ---@param data any Any data the entities subscribed should receive.
 ---@return any|nil response Every entity subscribed will receive the event, but the first entity to return something will have it forwarded via this.
@@ -170,6 +183,8 @@ function scn:triggerEvent(event, data)
     return ret
 end
 
+--- Creates an entity from the basetype(or default entity if none supplied) and returns its ID.
+--- 
 ---@param baseType cnd.scn.entity|nil
 ---@return integer
 function scn:makeEntity(baseType)
@@ -178,6 +193,7 @@ function scn:makeEntity(baseType)
     self.objects[ent.id] = ent
     return ent.id
 end
+--- Combines `makeEntity` and `assignEntity` into one function call. Recommended way to create entities
 ---@param baseType cnd.scn.entity|nil The base type of the entity
 ---@param layerId integer|nil the layer this is going to. if nil, entity is sent to 
 ---@param ... any Variadic parameters to be passed into the construction function of the entity.
@@ -186,6 +202,7 @@ function scn:quickCreate(baseType, layerId, ...)
     return self:assignEntity(eid, layerId or self.metaLayer.id, ...)
 end
 
+--- Called when a layer is added. You can call this if you modify a layer's priority.
 function scn:sortLayers()
     local sortFn = function(left, right)
         return self.objects[left].priority > self.objects[right].priority
@@ -217,6 +234,21 @@ end
 function scn:getLayer(layerId)
     return self.objects[layerId]
 end
+---@param entId integer
+---@return cnd.scn.entity
+function scn:getEntity(entId)
+    return self.objects[entId]
+end
+
+--- Convenience method that outputs general love information to `scr:dwatch`
+function scn:debugInfo()
+    if self.scr ~= nil then
+        local fps = love.timer.getFPS()
+        local kb = collectgarbage("count")
+    
+        self.scr:dwatch("love stats", ("%ifps, %.1fmb ram"):format(fps, kb/1000.0))
+    end
+end
 
 --- Places an entity into the layer, does setup,
 --- and returns the now functional entity.
@@ -233,6 +265,7 @@ function scn:assignEntity(entityId, layerId, ...)
     return entity
 end
 
+--- Automatically called by `cnd.update` if this scene is `cnd.currentscn`
 function scn:update()
     if self.executionMode == "sequential" then
         for i=1,#self.layers do
@@ -260,6 +293,7 @@ function scn:update()
     self:onUpdate()
 end
 
+--- Automatically called by `cnd.draw` if this scene is `cnd.currentscn`
 function scn:draw()
     if self.scr then
         self.scr:bind()

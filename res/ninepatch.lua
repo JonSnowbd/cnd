@@ -92,3 +92,5 @@ function ninepatch:rawDraw(w, h)
     love.graphics.draw(self.source, self.quads[8], self.left, self.top+remainingHeight, 0.0, barW, 1.0)
     love.graphics.draw(self.source, self.quads[9], self.left+remainingWidth, self.top+remainingHeight)
 end
+
+return ninepatch
