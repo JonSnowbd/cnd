@@ -1,8 +1,6 @@
 ---@diagnostic disable: param-type-mismatch
 local obj = require "cnd.obj"
 
--- This isnt ready yet. Also not sure if it even stays, this might be overcomplicated.
-
 ---@class cnd.scn : cnd.obj
 ---@field objects any[] 
 ---@field clearColor number[] a 4 number array of the clear color used.
