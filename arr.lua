@@ -1,6 +1,6 @@
 local obj = require "cnd.obj"
 
----@class cnd.arr : cnd.obj
+---@class cnd.arr: cnd.obj
 ---@field items any[]
 local arr = obj:extend()
 
@@ -8,12 +8,15 @@ function arr:new()
     self.items = {}
 end
 
+---@generic T
+---@param sortFn fun(left: T, right: T): boolean
 function arr:sort(sortFn)
     table.sort(self.items, sortFn)
 end
 
 --- Adds an item into the end of the array.
----@param item any
+---@generic T
+---@param item T
 function arr:append(item)
     self.items[#self.items+1] = item
 end
@@ -32,7 +35,8 @@ function arr:remove(index)
 end
 
 --- Returns true if the item exists in this arr.
----@param item any
+---@generic T
+---@param item T
 ---@return boolean
 function arr:has(item)
     for i=1,#self.items do
@@ -42,7 +46,8 @@ function arr:has(item)
 end
 
 --- Removes a specific item from the arr. Uses equality check `==`
----@param item any
+---@generic T
+---@param item T
 function arr:removeItem(item)
     for i=1,#self.items do
         if self.items[i] == item then
@@ -53,7 +58,8 @@ function arr:removeItem(item)
 end
 
 --- Removes items if `keep(item)` returns false.
----@param keep fun(item: any): boolean
+---@generic T
+---@param keep fun(item: T): boolean
 function arr:filter(keep)
     local new = {}
     for i=1,#self.items do

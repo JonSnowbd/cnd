@@ -28,7 +28,6 @@ layout.cmd = require "cnd.ui.drawcommand"
 ---@param parent cnd.ui
 function layout:new(id, parent)
     self.debug = false
-    self.background = {parent.defaultBackground, parent.defaultBackgroundData}
     self.padding = parent.defaultPadding or 2.0
     self.spacing = parent.defaultSpacing or 2.0
     self.id = id
@@ -308,6 +307,9 @@ function layout:finalize(layoutPhase)
         self.position.x = window.x - (self.size.x * self.origin.x)
         self.position.y = window.y - (self.size.y * self.origin.y)
     else
+        if self.background == nil and self.parent.defaultBackground ~= nil then
+            self.background = {self.parent.defaultBackground, self.parent.defaultBackgroundData}
+        end
         if self.background then
             local draw = layout.cmd(self.background[1], self.background[2], {1.0, 1.0, 1.0, 1.0})
             draw.position = mth.v2(self.position.x, self.position.y)

@@ -14,15 +14,11 @@ Slider.color = {0.9, 0.6, 0.6, 1.0}
 Slider.colorHover = {1.0, 0.8, 0.8, 1.0}
 --- Background color when confirm is down
 Slider.colorActive = {1.0, 1.0, 1.0, 1.0}
---- When the slider has marks, this is used to draw it.
----@type any
-Slider.mark = true
---- And this will be the mark data passed.
----@type any
-Slider.markData = nil
---- 
----@type number[]|nil
-Slider.marks = nil
+
+--- If true the value changed callback will be called the entire
+--- duration of the slide interaction.
+Slider.constantCallback = false
+
 Slider.width = 50.0
 Slider.height = 6.0
 Slider.value = 0.5
@@ -45,12 +41,18 @@ Slider.layout = function(ui, ovr)
     end
 
     if ui:widgetStuck() then
+        local constant = ovr.constantCallback or Slider.constantCallback
         col = ovr.colorActive or Slider.colorActive
         local x, _ = ui:widgetCursorLocation()
         local v = mth.clamp(x/w, 0.0, 1.0)
         local fn = ovr.valueChanged or Slider.valueChanged
-        fn(v)
+        if constant then
+            fn(v)
+        end
         if ui:widgetConfirmDown() == false then
+            if not constant then
+                fn(v)
+            end
             ui:widgetUnstick()
         end
     end

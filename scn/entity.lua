@@ -68,28 +68,32 @@ end
 ---@param tag any
 function entity:tag(tag)
     self.tags[tag] = true
-    self.parent:triggerEvent(self.parent.event.tagModified, {
-        target = self,
-        tag = tag,
-        wasAdded = true
-    })
+    self.parent:triggerEvent(self.parent.event.tagModified, self.parent.event.tagModified.added(self))
 end
-
+---@param tag any
+---@return boolean
+function entity:hasTag(tag)
+    return self.tags[tag] ~= nil
+end
 ---@param tag any
 function entity:untag(tag)
     self.tags[tag] = nil
-    self.parent:triggerEvent(self.parent.event.tagModified, {
-        target = self,
-        tag = tag,
-        wasAdded = false
-    })
+    self.parent:triggerEvent(self.parent.event.tagModified, self.parent.event.tagModified.removed(self))
 end
 
 function entity:disable()
+    local removed = self.enabled
     self.enabled = false
+    if removed then
+        self:onExitLayer()
+    end
 end
 function entity:enable()
+    local added = self.enabled == false
     self.enabled = true
+    if added then
+        self:onEnterLayer()
+    end
 end
 
 function entity:delete()

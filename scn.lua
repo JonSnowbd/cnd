@@ -36,12 +36,13 @@ scn.tag = {
     meta = {name="Meta"},
 }
 
-scn.event = {
-    tagModified = {name="Tag Modified"},
-}
+scn.event = {}
+scn.event.tagModified = require "cnd.scn.tagModified"
 
 scn.entity = require "cnd.scn.entity"
 scn.layer = require "cnd.scn.layer"
+
+scn.lens = require "cnd.scn.lens"
 
 ---@type cnd.scr|nil
 scn.defaultScr = nil
@@ -59,9 +60,34 @@ function scn:warn(ent, layer, message)
         msg = "|LYR#" .. msg .. tostring(self.objects[layer])
     end
 
-    print(msg.." >> '"..message.."'")
-end
+    msg = msg.." >> '"..message.."'"
+    if self.scr ~= nil then
+        self.scr:dlog(msg, 1.0)
+    end
 
+    print(msg)
+end
+--- Customized info log
+---@param ent integer|nil
+---@param layer integer|nil
+---@param message string
+function scn:info(ent, layer, message)
+    local msg = "Scene"
+    if ent ~= nil then
+        msg = "|ENT#".. msg .. tostring(self.objects[ent])
+    end
+    if layer ~= nil then
+        msg = "|LYR#" .. msg .. tostring(self.objects[layer])
+    end
+
+    msg = msg.." > '"..message.."'"
+
+    if self.scr ~= nil then
+        self.scr:dlog(msg, 1.0)
+    end
+
+    print(msg)
+end
 --- Customized crash message
 ---@param ent integer|nil
 ---@param layer integer|nil
@@ -74,9 +100,7 @@ function scn:crash(ent, layer, message)
     if layer ~= nil then
         msg = " LYR#" .. msg .. tostring(self.objects[layer])
     end
-
-    print(msg.." '"..message.."'")
-    error(message)
+    error(msg.." '"..message.."'")
 end
 
 --- A scene's construction method. It is only really here for parity with entities. 
@@ -113,6 +137,7 @@ function scn:new()
     }
 
     self.metaLayer = scn.layer(self, 999999)
+    self.metaLayer.name = "Meta Layer (System)"
     self.objects[self.metaLayer.id] = self.metaLayer
     self.metaLayer.space = "ethereal"
 

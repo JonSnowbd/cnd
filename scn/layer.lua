@@ -51,6 +51,18 @@ function layer:addEntity(entity, ...)
     end
 end
 
+--- Iterates every enabled entity.
+---@return fun(): cnd.scn.entity
+function layer:iterate()
+    local i = 0
+    return function()
+        i = i+1
+        while self.entities[i] ~= nil and self.entities[i].enabled == false do
+            i = i+1
+        end
+        return self.entities[i]
+    end
+end
 
 ---comment
 ---@param entity cnd.scn.entity

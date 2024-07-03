@@ -9,7 +9,7 @@ local mth = require "cnd.mth"
 ---@field font love.Font The draw value, supports anything that can be drawn by the ui.
 local Label = {}
 
-Label.color = {0.2, 0.2, 0.2, 1.0}
+Label.color = {1.0, 1.0, 1.0, 1.0}
 Label.text = "Default Text"
 Label.pressed = function() end
 
