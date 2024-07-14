@@ -52,7 +52,7 @@ end
 ---@return any|nil
 function layout:widgetGetState(key, defaultValue)
     if self.widgets[self.currentWidget] ~= nil then
-        if self.widgets[self.currentWidget].state[key] ~= nil then
+        if self.widgets[self.currentWidget].state[key] == nil then
             self.widgets[self.currentWidget].state[key] = defaultValue
         end
         return self.widgets[self.currentWidget].state[key]
@@ -72,11 +72,12 @@ end
 function layout:widgetID()
     return self.currentWidget
 end
+---@return cnd.mth.v2
 function layout:widgetCursorLocation()
     if self.layingOut or self.widgets[self.currentWidget].state.relativeCursor == nil then
-        return -1.0, -1.0
+        return mth.v2(-1, -1)
     end
-    return self.widgets[self.currentWidget].state.relativeCursor[1], self.widgets[self.currentWidget].state.relativeCursor[2]
+    return self.widgets[self.currentWidget].state.relativeCursor
 end
 --- Returns true if the widget is visible, and the cursor is inside
 --- the given rect.

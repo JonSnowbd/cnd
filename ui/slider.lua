@@ -43,8 +43,8 @@ Slider.layout = function(ui, ovr)
     if ui:widgetStuck() then
         local constant = ovr.constantCallback or Slider.constantCallback
         col = ovr.colorActive or Slider.colorActive
-        local x, _ = ui:widgetCursorLocation()
-        local v = mth.clamp(x/w, 0.0, 1.0)
+        local cursor = ui:widgetCursorLocation()
+        local v = mth.clamp(cursor.x/w, 0.0, 1.0)
         local fn = ovr.valueChanged or Slider.valueChanged
         if constant then
             fn(v)

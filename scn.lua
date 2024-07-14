@@ -48,7 +48,7 @@ scn.lens = require "cnd.scn.lens"
 scn.defaultScr = nil
 
 --- Customized warning
----@param ent integer|nil
+---@param ent integer|nil the entities ID integer, or nil for a general log.
 ---@param layer integer|nil
 ---@param message string
 function scn:warn(ent, layer, message)
@@ -68,7 +68,7 @@ function scn:warn(ent, layer, message)
     print(msg)
 end
 --- Customized info log
----@param ent integer|nil
+---@param ent integer|nil the entities ID integer, or nil for a general log.
 ---@param layer integer|nil
 ---@param message string
 function scn:info(ent, layer, message)
@@ -89,7 +89,7 @@ function scn:info(ent, layer, message)
     print(msg)
 end
 --- Customized crash message
----@param ent integer|nil
+---@param ent integer|nil the entities ID integer, or nil for a general log.
 ---@param layer integer|nil
 ---@param message string
 function scn:crash(ent, layer, message)

@@ -52,6 +52,9 @@ function ui:addDefaultRenderers()
         love.graphics.setFont(fnt)
         love.graphics.print(msg, x, y)
     end
+    self.renderHandler["Text"] = function(val, _, x, y, w, h)
+        love.graphics.draw(val, x, y)
+    end
     self.renderHandler["ninepatch"] = function(val, data, x, y, w, h)
         res.ninepatch.draw(val, x, y, w, h)
     end

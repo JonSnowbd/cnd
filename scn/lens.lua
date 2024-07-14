@@ -18,7 +18,7 @@ local lens = entity:extend()
 function lens:_add(other)
     self.cache[other] = true
     self.targets:append(other)
-    self.parent:info(self.id, self.layer, "Added new entity to "..self.name..": "..other.name)
+    self.parent:info(self.id, self.layer, "Added new entity to "..tostring(self)..": "..tostring(other))
     if self.newEntity ~= nil then
         self.newEntity(other)
     end
@@ -60,6 +60,7 @@ function lens:onConstruct(tag, debugOn)
     if tag == nil then
         self.parent:crash(self.id, self.layer, "Failed to supply a tag to track.")
     end
+    self.cache = {}
     self.debug = debugOn or false
     self.tracking = tag
     self.targets = arr()
@@ -68,11 +69,13 @@ function lens:onConstruct(tag, debugOn)
 end
 
 function lens:onEnterLayer()
-    ---@type cnd.scn.layer
-    local layer = self.parent:getLayer(self.layer)
-    for ent in layer:iterate() do
-        if ent:hasTag(self.tracking) then
-            self:_add(ent)
+    for i=1,#self.parent.layers do
+        ---@type cnd.scn.layer
+        local layer = self.parent.objects[self.parent.layers[i]]
+        for ent in layer:iterate() do
+            if ent:hasTag(self.tracking) and ent ~= self then
+                self:_add(ent)
+            end
         end
     end
 end
