@@ -4,7 +4,10 @@ local arr = require "cnd.arr"
 ---@param left cnd.scn.entity
 ---@param right cnd.scn.entity
 local function sortEntity(left, right)
-    return left.id < right.id
+    if left.priority == right.priority then
+        return left.id < right.id
+    end
+    return left.priority < right.priority
 end
 
 ---@class cnd.scn.layer
@@ -97,6 +100,10 @@ end
 function layer:resort(phase, sortFn)
     if self.enabledPhases[phase] ~= nil then
         self.enabledPhases[phase]:sort(sortFn or sortEntity)
+        print("---- Layer: "..(phase.name or "UNK"))
+        for ent in self.enabledPhases[phase]:iter() do
+            print("Ent: "..tostring(ent))
+        end
     end
 end
 

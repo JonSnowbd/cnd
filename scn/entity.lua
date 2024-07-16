@@ -6,6 +6,7 @@ local mth = require "cnd.mth"
 ---@field constructed boolean
 ---@field parent cnd.scn
 ---@field queuedForDeletion boolean
+---@field priority number higher = the entity is notified first.
 ---@field layer integer the layer handle 
 ---@field enabled boolean if true, subscriptions are ran.
 ---@field id integer
@@ -18,6 +19,24 @@ local mth = require "cnd.mth"
 ---@overload fun(cnd.scn: cnd.scn): cnd.scn.entity
 local entity = obj:extend()
 
+---@param message string
+function entity:info(message)
+    if self.parent ~= nil then
+        self.parent:info(self.id, self.layer, message)
+    end
+end
+---@param message string
+function entity:warn(message)
+    if self.parent ~= nil then
+        self.parent:warn(self.id, self.layer, message)
+    end
+end
+---@param message string
+function entity:crash(message)
+    if self.parent ~= nil then
+        self.parent:crash(self.id, self.layer, message)
+    end
+end
 ---@param scn cnd.scn
 function entity:new(scn)
     self.parent = scn
@@ -31,6 +50,7 @@ function entity:new(scn)
     self.origin = mth.v2(0.5, 0.5)
 
     self.queuedForDeletion = false
+    self.priority = 0
 
     self.layer = -1
     self.tags = {}
@@ -124,6 +144,14 @@ function entity:setPosition(x, y)
 end
 function entity:setRotation(rads)
     self.rotation = rads
+end
+
+function entity:setPriority(prio)
+    self.priority = prio
+    local layer = self.parent:getLayer(self.layer)
+    for k, v in pairs(self.subscriptions) do
+        layer:resort(k)
+    end
 end
 
 function entity:__tostring()

@@ -127,7 +127,8 @@ function scn:new()
         scn.phase.input,
         scn.phase.preUpdate,
         scn.phase.update,
-        scn.phase.postUpdate
+        scn.phase.postUpdate,
+        scn.phase.fixedUpdate,
     }
     self.drawPhases = {
         scn.phase.preDraw,
